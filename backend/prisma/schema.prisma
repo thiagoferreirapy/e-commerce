@@ -1,0 +1,248 @@
+// Schema TORQUE — SQLite (por enquanto).
+// Enums e JSON são representados como String (compatibilidade SQLite) e
+// validados/serializados na camada de aplicação.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Brand {
+  id       String    @id
+  name     String
+  slug     String    @unique
+  logoUrl  String
+  products Product[]
+}
+
+model Seller {
+  id       String    @id
+  name     String
+  rating   Float
+  official Boolean   @default(true)
+  products Product[]
+}
+
+model Category {
+  id          String  @id
+  name        String
+  slug        String  @unique
+  parentSlug  String?
+  imageUrl    String
+  description String?
+}
+
+model Product {
+  id               String   @id
+  name             String
+  slug             String   @unique
+  brandId          String
+  sellerId         String
+  categorySlug     String
+  subcategorySlug  String?
+  listPrice        Float
+  price            Float
+  ref              String
+  shortDescription String
+  description      String
+  rating           Float    @default(0)
+  reviewCount      Int      @default(0)
+  totalStock       Int      @default(0)
+  freeShipping     Boolean  @default(false)
+  offerEndsAt      DateTime?
+  soldCount        Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  brand   Brand  @relation(fields: [brandId], references: [id])
+  seller  Seller @relation(fields: [sellerId], references: [id])
+
+  images   ProductImage[]
+  specs    ProductSpec[]
+  tags     ProductTag[]
+  variants Variant[]
+  reviews  Review[]
+
+  @@index([categorySlug])
+  @@index([subcategorySlug])
+  @@index([brandId])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  position  Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductSpec {
+  id        String  @id @default(cuid())
+  productId String
+  label     String
+  value     String
+  position  Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductTag {
+  id        String  @id @default(cuid())
+  productId String
+  tag       String // destaque | novidade | mais-vendido | oferta-do-dia | ultimas-unidades
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([tag])
+}
+
+model Variant {
+  id        String  @id
+  productId String
+  sku       String
+  stock     Int     @default(0)
+  imageUrl  String?
+  color     String?
+  size      String?
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([color])
+  @@index([size])
+}
+
+model Review {
+  id        String   @id
+  productId String
+  userId    String? // autor (cliente) quando feita pela conta; null nos seeds
+  author    String
+  rating    Int
+  title     String
+  comment   String
+  date      DateTime
+  verified  Boolean  @default(false)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([userId])
+}
+
+model Coupon {
+  code        String  @id
+  type        String // percent | fixed
+  value       Float
+  minSubtotal Float?
+  description String
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         String        @default("user") // user | admin
+  cpf          String?
+  phone        String?
+  addresses    Address[]
+  orders       Order[]
+  cartItems    CartItem[]
+  wishlist     WishlistItem[]
+  createdAt    DateTime      @default(now())
+}
+
+model Address {
+  id         String  @id @default(cuid())
+  userId     String
+  label      String
+  recipient  String
+  cep        String
+  street     String
+  number     String
+  complement String?
+  district   String
+  city       String
+  state      String
+  isDefault  Boolean @default(false)
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  number          String      @unique
+  userId          String?
+  status          String      @default("pago") // pago | enviado | entregue | cancelado
+  subtotal        Float
+  discount        Float       @default(0)
+  shipping        Float       @default(0)
+  total           Float
+  payment         String // pix | cartao | boleto
+  installments    Int         @default(1) // nº de parcelas (cartão)
+  shippingLabel   String
+  addressSnapshot String // JSON serializado do endereço de entrega
+  createdAt       DateTime    @default(now())
+  items           OrderItem[]
+  user            User?       @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model OrderItem {
+  id           String  @id @default(cuid())
+  orderId      String
+  productId    String
+  name         String
+  imageUrl     String
+  variantLabel String?
+  unitPrice    Float
+  quantity     Int
+  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  userId    String
+  productId String
+  variantId String?
+  quantity  Int
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId, variantId])
+  @@index([userId])
+}
+
+model WishlistItem {
+  id        String @id @default(cuid())
+  userId    String
+  productId String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

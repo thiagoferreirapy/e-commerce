@@ -1,0 +1,85 @@
+/**
+ * Formatação pt-BR / regras comerciais brasileiras.
+ * Centraliza moeda, parcelamento, desconto Pix, datas e CEP.
+ */
+
+const BRL = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
+/** R$ 1.234,56 */
+export function formatBRL(value: number): string {
+  return BRL.format(value);
+}
+
+/** 25 -> "25% OFF" */
+export function formatDiscountBadge(percent: number): string {
+  return `${Math.round(percent)}% OFF`;
+}
+
+/** Percentual de desconto entre preço cheio e preço final. */
+export function discountPercent(listPrice: number, price: number): number {
+  if (listPrice <= 0 || price >= listPrice) return 0;
+  return Math.round((1 - price / listPrice) * 100);
+}
+
+/** Desconto à vista no Pix (config padrão da loja: 10%). */
+export const PIX_DISCOUNT = 0.1;
+
+export function pixPrice(price: number, discount = PIX_DISCOUNT): number {
+  return round2(price * (1 - discount));
+}
+
+/**
+ * Parcelamento sem juros. Por padrão até 12x, com parcela mínima de R$ 49,90.
+ * Retorna a maior quantidade de parcelas válida e o valor de cada uma.
+ */
+export function installments(
+  price: number,
+  maxInstallments = 12,
+  minInstallment = 49.9,
+): { count: number; value: number } {
+  let count = maxInstallments;
+  while (count > 1 && price / count < minInstallment) count--;
+  return { count, value: round2(price / count) };
+}
+
+/** "12x de R$ 99,90 sem juros" */
+export function formatInstallments(price: number): string {
+  const { count, value } = installments(price);
+  if (count <= 1) return `à vista ${formatBRL(price)}`;
+  return `${count}x de ${formatBRL(value)} sem juros`;
+}
+
+/** 12 de junho de 2026 */
+export function formatDate(date: string | Date): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(d);
+}
+
+/** 12/06/2026 */
+export function formatDateShort(date: string | Date): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("pt-BR").format(d);
+}
+
+/** Normaliza e formata CEP: 01310100 -> 01310-100 */
+export function formatCEP(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 5) return digits;
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+}
+
+export function isValidCEP(raw: string): boolean {
+  return raw.replace(/\D/g, "").length === 8;
+}
+
+/** Arredonda para 2 casas evitando erros de ponto flutuante. */
+export function round2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}

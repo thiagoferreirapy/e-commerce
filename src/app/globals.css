@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===========================================================================
+   TORQUE — camada base
+   Variáveis de runtime, reset suave e utilitários compartilhados.
+   =========================================================================== */
+
+@layer base {
+  :root {
+    --color-bg: 250 249 247; /* neutral-50 */
+    --color-fg: 14 15 18; /* ink */
+    --header-h: 64px;
+    /* Tipografia única (substituto livre da Proxima Nova: Montserrat).
+       Títulos e corpo usam a mesma família via --font-sans. */
+    --font-display: var(--font-sans);
+    --font-body: var(--font-sans);
+    --font-heading: var(--font-sans);
+  }
+
+  * {
+    @apply border-neutral-200;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-neutral-50 text-ink antialiased font-sans;
+    /* Corpo: Sarala regular (400), leitura confortável. */
+    font-weight: 400;
+    line-height: 1.6;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Sarala só tem 400/700 — evita "faux bold" sintético em pesos intermediários. */
+  body, p, li, td, input, textarea, select, figcaption, small {
+    font-synthesis-weight: none;
+  }
+
+  /* Títulos em Poppins. Peso 600 por padrão; 700 reservado ao título principal. */
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight text-ink;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  /* Poppins também em elementos de "interface": botões, labels e títulos de
+     coluna de tabela (todos suportam 500/600). Não força o peso — deixa as
+     utilidades existentes decidirem. */
+  button, label, select, th, legend, .title, .eyebrow {
+    font-family: var(--font-display);
+  }
+
+  /* Foco visível e consistente (acessibilidade AA) */
+  :focus-visible {
+    @apply outline-none ring-2 ring-flame ring-offset-2 ring-offset-neutral-50 rounded-sm;
+  }
+
+  /* Respeita usuários que preferem menos movimento */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Esconde spinners de input number */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+@layer components {
+  /* Wrapper de largura padrão do conteúdo */
+  .container-page {
+    @apply mx-auto w-full max-w-[1320px] px-4 lg:px-8;
+  }
+
+  /* Skeleton loader com shimmer */
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-neutral-200/70;
+  }
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.6),
+      transparent
+    );
+    animation: shimmer 1.4s infinite;
+  }
+
+  /* Esconde a scrollbar mantendo o scroll (carrosséis) */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/* Tipografia utilitária para o "eyebrow"/kicker editorial */
+.eyebrow {
+  @apply text-2xs font-semibold uppercase tracking-[0.18em] text-flame-600;
+}
+
+/* ---------------------------------------------------------------------------
+   Teto de peso (refinamento): nada acima de 600 (semibold). Evita o visual
+   "pesado" — hierarquia se faz por tamanho/cor, não por negrito em tudo.
+   Override aplicado após as utilities do Tailwind.
+   --------------------------------------------------------------------------- */
+.font-bold,
+.font-extrabold,
+.font-black {
+  font-weight: 600;
+}
+
