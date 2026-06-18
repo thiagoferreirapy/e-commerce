@@ -18,6 +18,7 @@ const bool = z
 
 export const productQuerySchema = z.object({
   category: z.string().optional(),
+  subcategory: csv,
   q: z.string().optional(),
   tag: z.string().optional(),
   brand: csv,

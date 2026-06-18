@@ -10,7 +10,7 @@ export function Hero() {
         {/* Banner principal */}
         <Link
           href="/categoria/capacetes"
-          className="group relative col-span-2 flex min-h-[280px] items-end overflow-hidden rounded-2xl bg-ink md:min-h-[420px]"
+          className="group relative flex min-h-[280px] items-end overflow-hidden rounded-2xl bg-ink lg:col-span-2 md:min-h-[420px]"
         >
           <Image
             src="https://picsum.photos/seed/torque-hero-moto/1200/800"
@@ -36,8 +36,8 @@ export function Hero() {
           </div>
         </Link>
 
-        {/* Banners secundários */}
-        <div className="grid gap-4">
+        {/* Banners secundários: par lado a lado no mobile, empilhados no desktop. */}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-1">
           <SecondaryBanner
             href="/categoria/escapamentos"
             seed="torque-hero-escape"

@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { Rating } from "@/components/ui/Rating";
 import { PriceBlock } from "@/components/ui/PriceBlock";
+import { resolveOffer } from "@/lib/format";
 import { QtyStepper } from "@/components/ui/QtyStepper";
 import { Countdown } from "@/components/ui/Countdown";
 import { Button } from "@/components/ui/Button";
@@ -27,6 +28,7 @@ export function ProductDetail({ product }: { product: Product }) {
   const addItem = useCartStore((s) => s.addItem);
 
   const hasVariants = product.variantAxes.length > 0;
+  const offer = resolveOffer(product);
 
   // Seleção inicial: primeira opção de cada eixo.
   const [selected, setSelected] = useState<Partial<Record<VariantAxis, string>>>(() => {
@@ -121,19 +123,19 @@ export function ProductDetail({ product }: { product: Product }) {
           {lowStock && <Badge tone="warning">Últimas {stock} unidades</Badge>}
         </div>
 
-        {product.offerEndsAt && inStock && (
+        {offer.endsAt && inStock && (
           <div className="mt-4 flex items-center gap-2.5 text-sm">
             <span className="inline-flex items-center gap-1.5 font-medium text-flame-700">
               <span className="size-1.5 rounded-full bg-flame" />
               Oferta termina em
             </span>
-            <Countdown endsAt={product.offerEndsAt} />
+            <Countdown endsAt={offer.endsAt} />
           </div>
         )}
 
         {/* Preço */}
         <div className="mt-5">
-          <PriceBlock listPrice={product.listPrice} price={product.price} size="lg" />
+          <PriceBlock listPrice={offer.listPrice} price={offer.price} size="lg" />
         </div>
 
         {/* Variantes */}

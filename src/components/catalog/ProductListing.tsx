@@ -15,6 +15,7 @@ import { Select } from "@/components/ui/Select";
 import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
 import { FilterIcon, SearchIcon } from "@/components/ui/icons";
+import { cn } from "@/lib/utils";
 import { FilterSidebar, type CatalogFilters } from "./FilterSidebar";
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
@@ -30,6 +31,7 @@ const PAGE_SIZE = 12;
 
 function emptyFilters(): CatalogFilters {
   return {
+    subcategories: [],
     brandSlugs: [],
     colors: [],
     sizes: [],
@@ -45,17 +47,20 @@ export function ProductListing({
   tag,
   query,
   initialBrandSlugs = [],
+  initialSubcategories = [],
   emptyMessage,
 }: {
   categorySlug?: string;
   tag?: ProductTag;
   query?: string;
   initialBrandSlugs?: string[];
+  initialSubcategories?: string[];
   emptyMessage?: string;
 }) {
   const [filters, setFilters] = useState<CatalogFilters>(() => ({
     ...emptyFilters(),
     brandSlugs: initialBrandSlugs,
+    subcategories: initialSubcategories,
   }));
   const [sort, setSort] = useState<SortKey>("relevancia");
   const [page, setPage] = useState(1);
@@ -64,16 +69,26 @@ export function ProductListing({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(true); // sidebar desktop
   const priceTouched = useRef(false);
 
   // Reaplica filtros base quando a categoria/busca muda.
   useEffect(() => {
     priceTouched.current = false;
     setBounds(null);
-    setFilters({ ...emptyFilters(), brandSlugs: initialBrandSlugs });
+    setFilters({ ...emptyFilters(), brandSlugs: initialBrandSlugs, subcategories: initialSubcategories });
     setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categorySlug, query, tag]);
+
+  // Reflete a subcategoria selecionada na URL (link compartilhável), sem recarregar.
+  function syncSubUrl(subs: string[]) {
+    if (!categorySlug || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (subs.length) url.searchParams.set("sub", subs.join(","));
+    else url.searchParams.delete("sub");
+    window.history.replaceState(null, "", url.toString());
+  }
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -88,6 +103,7 @@ export function ProductListing({
         categorySlug,
         tag,
         query,
+        subcategories: filters.subcategories.length ? filters.subcategories : undefined,
         brandSlugs: filters.brandSlugs.length ? filters.brandSlugs : undefined,
         colors: filters.colors.length ? filters.colors : undefined,
         sizes: filters.sizes.length ? filters.sizes : undefined,
@@ -123,12 +139,16 @@ export function ProductListing({
     if (next.price.min !== filters.price.min || next.price.max !== filters.price.max) {
       priceTouched.current = true;
     }
+    if (next.subcategories.join(",") !== filters.subcategories.join(",")) {
+      syncSubUrl(next.subcategories);
+    }
     setFilters(next);
     setPage(1);
   }
 
   function clearFilters() {
     priceTouched.current = false;
+    syncSubUrl([]);
     setFilters({ ...emptyFilters(), price: bounds ?? { min: 0, max: 0 } });
     setPage(1);
   }
@@ -145,9 +165,9 @@ export function ProductListing({
     ) : null;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
-      {/* Sidebar desktop */}
-      <aside className="hidden lg:block">{sidebar}</aside>
+    <div className={cn("grid gap-8", showFilters && "lg:grid-cols-[260px_1fr]")}>
+      {/* Sidebar desktop (ocultável) */}
+      {showFilters && <aside className="hidden lg:block">{sidebar}</aside>}
 
       <div>
         {/* Toolbar */}
@@ -173,6 +193,15 @@ export function ProductListing({
               className="flex items-center gap-2 rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium text-ink lg:hidden"
             >
               <FilterIcon className="size-4" /> Filtros
+            </button>
+            {/* Desktop: oculta/mostra a sidebar de filtros */}
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              aria-pressed={!showFilters}
+              className="hidden items-center gap-2 rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium text-ink hover:bg-neutral-50 lg:flex"
+            >
+              <FilterIcon className="size-4" />
+              {showFilters ? "Ocultar filtros" : "Mostrar filtros"}
             </button>
             <div className="flex-1 sm:w-48 sm:flex-none">
               <Select

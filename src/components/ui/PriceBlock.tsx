@@ -54,10 +54,11 @@ export function PriceBlock({
         {formatBRL(price)}
       </div>
       {showPix && (
-        <p className="flex items-center gap-1 text-sm font-semibold text-success">
-          <PixIcon className="size-4" />
-          {formatBRL(pix)} <span className="font-normal text-neutral-500">à vista no Pix</span>
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="flex items-center gap-1 text-sm font-semibold text-success">
+            {formatBRL(pix)} <span className="font-normal text-neutral-500">à vista no Pix</span>
+          </p>
+        </div>
       )}
       {showInstallments && (
         <p className="text-xs text-neutral-500">ou {formatInstallments(price)}</p>

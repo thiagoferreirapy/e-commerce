@@ -92,10 +92,20 @@ export async function createOrder(input: CreateOrderInput, userId?: string) {
 
   const subtotal = round2(lines.reduce((acc, l) => acc + l.lineTotal, 0));
 
-  // Cupom (revalidado no servidor).
+  // Cupom (revalidado no servidor): escopo, validade, limite de usos e mínimo.
   let discount = 0;
+  let appliedCouponCode: string | null = null;
   if (input.couponCode) {
-    discount = (await applyCoupon(input.couponCode, subtotal)).discount;
+    const couponLines = lines.map((l) => ({
+      productId: l.product.id,
+      categorySlug: l.product.categorySlug,
+      subcategorySlug: l.product.subcategorySlug ?? null,
+      brandId: l.product.brandId,
+      lineTotal: l.lineTotal,
+    }));
+    const result = await applyCoupon(input.couponCode, subtotal, couponLines);
+    discount = result.discount;
+    appliedCouponCode = result.coupon.code;
   }
 
   // Frete a partir do CEP + opção escolhida.
@@ -160,6 +170,14 @@ export async function createOrder(input: CreateOrderInput, userId?: string) {
       await tx.product.update({
         where: { id: l.product.id },
         data: { totalStock: { decrement: l.quantity }, soldCount: { increment: l.quantity } },
+      });
+    }
+
+    // Contabiliza o resgate do cupom (limite de usos).
+    if (appliedCouponCode) {
+      await tx.coupon.update({
+        where: { code: appliedCouponCode },
+        data: { usedCount: { increment: 1 } },
       });
     }
 

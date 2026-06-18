@@ -21,6 +21,9 @@ export interface Category {
   imageUrl: string;
   /** Emoji/ícone NÃO é usado na UI — usamos imagem. Mantido só para seed. */
   description?: string;
+  /** Destaque no header (aparece primeiro) e ordem de exibição. */
+  featured?: boolean;
+  position?: number;
 }
 
 export type VariantAxis = "color" | "size";
@@ -114,6 +117,9 @@ export interface CartItem {
 
 export type CouponType = "percent" | "fixed";
 
+/** Escopo do cupom: site todo, categoria, marca ou produto específico. */
+export type CouponScope = "all" | "category" | "brand" | "product";
+
 export interface Coupon {
   code: string;
   type: CouponType;
@@ -121,6 +127,15 @@ export interface Coupon {
   value: number;
   minSubtotal?: number;
   description: string;
+  scope: CouponScope;
+  /** slug da categoria/marca ou id do produto; ausente quando scope=all. */
+  scopeValue?: string | null;
+  /** Limite total de resgates; ausente/null = ilimitado. */
+  maxUses?: number | null;
+  usedCount?: number;
+  /** Janela de validade (ISO); ausente = sem restrição. */
+  startsAt?: string | null;
+  expiresAt?: string | null;
 }
 
 export interface ShippingOption {

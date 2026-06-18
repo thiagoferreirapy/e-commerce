@@ -11,6 +11,8 @@ import { UserIcon } from "@/components/ui/icons";
 const NAV = [
   { href: "/admin", label: "Dashboard", exact: true },
   { href: "/admin/produtos", label: "Produtos" },
+  { href: "/admin/categorias", label: "Categorias" },
+  { href: "/admin/marcas", label: "Marcas" },
   { href: "/admin/pedidos", label: "Pedidos" },
   { href: "/admin/cupons", label: "Cupons" },
 ];

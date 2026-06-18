@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Product, ProductTag } from "@/types";
-import { brands } from "@/data/brands";
-import { categories, rootCategories } from "@/data/categories";
 import {
   createProduct,
   updateProduct,
   uploadProductImage,
+  listAdminBrands,
+  listAdminCategories,
   type ProductInput,
   type ProductVariantInput,
 } from "@/services/admin";
@@ -62,8 +62,8 @@ function fromProduct(p: Product): ProductInput {
 const blank: ProductInput = {
   name: "",
   slug: "",
-  brandId: brands[0]?.id ?? "",
-  categorySlug: rootCategories[0]?.slug ?? "",
+  brandId: "",
+  categorySlug: "",
   subcategorySlug: null,
   listPrice: 0,
   price: 0,
@@ -87,6 +87,30 @@ export function ProductForm({ product }: { product?: Product }) {
   const [slugTouched, setSlugTouched] = useState(editing);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  // Marcas e categorias vêm da API (refletem o que foi cadastrado no admin).
+  const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<
+    { slug: string; name: string; parentSlug: string | null }[]
+  >([]);
+
+  useEffect(() => {
+    listAdminBrands()
+      .then((bs) => {
+        setBrands(bs.map((b) => ({ id: b.id, name: b.name })));
+        if (!editing) setForm((f) => (f.brandId ? f : { ...f, brandId: bs[0]?.id ?? "" }));
+      })
+      .catch(() => {});
+    listAdminCategories()
+      .then((cs) => {
+        setCategories(cs.map((c) => ({ slug: c.slug, name: c.name, parentSlug: c.parentSlug })));
+        const firstRoot = cs.find((c) => !c.parentSlug)?.slug ?? "";
+        if (!editing) setForm((f) => (f.categorySlug ? f : { ...f, categorySlug: firstRoot }));
+      })
+      .catch(() => {});
+  }, [editing]);
+
+  const rootCategories = categories.filter((c) => !c.parentSlug);
 
   function set<K extends keyof ProductInput>(key: K, value: ProductInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));

@@ -5,6 +5,8 @@ import { adminOrdersRouter } from "./orders";
 import { adminCouponsRouter } from "./coupons";
 import { adminStatsRouter } from "./stats";
 import { adminUploadsRouter } from "./uploads";
+import { adminBrandsRouter } from "./brands";
+import { adminCategoriesRouter } from "./categories";
 
 export const adminRouter = Router();
 
@@ -16,3 +18,5 @@ adminRouter.use("/products", adminProductsRouter);
 adminRouter.use("/orders", adminOrdersRouter);
 adminRouter.use("/coupons", adminCouponsRouter);
 adminRouter.use("/uploads", adminUploadsRouter);
+adminRouter.use("/brands", adminBrandsRouter);
+adminRouter.use("/categories", adminCategoriesRouter);

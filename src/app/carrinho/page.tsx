@@ -58,15 +58,15 @@ export default function CartPage() {
 
   // Restaura cupom persistido validando no servidor.
   useEffect(() => {
-    if (storedCoupon && !coupon && totals.subtotal > 0) {
-      applyCoupon(storedCoupon, totals.subtotal)
+    if (storedCoupon && !coupon && items.length > 0) {
+      applyCoupon(storedCoupon, items)
         .then((r) => setCoupon(r.coupon))
         .catch(() => setStoredCoupon(null));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storedCoupon, totals.subtotal]);
+  }, [storedCoupon, items]);
 
-  const discount = coupon ? couponDiscount(coupon, totals.subtotal) : 0;
+  const discount = coupon ? couponDiscount(coupon, lines) : 0;
   const shipping = selectedShipping ? selectedShipping.price : null;
   const pixTotal = round2(pixPrice(totals.subtotal - discount) + (shipping ?? 0));
 
@@ -142,7 +142,7 @@ export default function CartPage() {
         {/* Resumo */}
         <aside className="space-y-4 lg:sticky lg:top-28 lg:self-start">
           <CouponField
-            subtotal={totals.subtotal}
+            items={items}
             applied={coupon}
             onApplied={(c) => {
               setCoupon(c);

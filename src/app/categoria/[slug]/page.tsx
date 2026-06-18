@@ -1,33 +1,34 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getCategory, categoryTrail } from "@/data/categories";
+import { getCategoryContext } from "@/services/catalog";
 import { brandsBySlug } from "@/data/brands";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ProductListing } from "@/components/catalog/ProductListing";
 
 interface Props {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ marca?: string }>;
+  searchParams: Promise<{ marca?: string; sub?: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const category = getCategory(slug);
-  if (!category) return { title: "Categoria" };
+  const ctx = await getCategoryContext(slug);
+  if (!ctx) return { title: "Categoria" };
   return {
-    title: category.name,
-    description: category.description ?? `Veja ${category.name} na TORQUE.`,
+    title: ctx.category.name,
+    description: ctx.category.description ?? `Veja ${ctx.category.name} na TORQUE.`,
   };
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
   const { slug } = await params;
-  const { marca } = await searchParams;
-  const category = getCategory(slug);
-  if (!category) notFound();
+  const { marca, sub } = await searchParams;
+  const ctx = await getCategoryContext(slug);
+  if (!ctx) notFound();
 
-  const trail = categoryTrail(slug);
+  const { category, trail } = ctx;
   const initialBrandSlugs = marca && brandsBySlug.has(marca) ? [marca] : [];
+  const initialSubcategories = sub ? sub.split(",").map((s) => s.trim()).filter(Boolean) : [];
 
   return (
     <div className="container-page py-6">
@@ -50,7 +51,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         )}
       </header>
 
-      <ProductListing categorySlug={slug} initialBrandSlugs={initialBrandSlugs} />
+      <ProductListing
+        categorySlug={slug}
+        initialBrandSlugs={initialBrandSlugs}
+        initialSubcategories={initialSubcategories}
+      />
     </div>
   );
 }

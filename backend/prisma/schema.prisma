@@ -34,6 +34,9 @@ model Category {
   parentSlug  String?
   imageUrl    String
   description String?
+  // Destaque no header (categorias favoritas aparecem primeiro) e ordem de exibição.
+  featured    Boolean @default(false)
+  position    Int     @default(0)
 }
 
 model Product {
@@ -139,6 +142,16 @@ model Coupon {
   value       Float
   minSubtotal Float?
   description String
+  // Escopo: a quais itens o cupom se aplica. scope = all | category | brand | product.
+  // scopeValue guarda o slug (category/brand) ou o id (product); null quando scope=all.
+  scope       String   @default("all")
+  scopeValue  String?
+  // Limite de usos (resgates). maxUses null = ilimitado; usedCount incrementa a cada pedido.
+  maxUses     Int?
+  usedCount   Int      @default(0)
+  // Janela de validade (opcional). Fora dela o cupom é recusado.
+  startsAt    DateTime?
+  expiresAt   DateTime?
 }
 
 model User {

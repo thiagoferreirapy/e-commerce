@@ -26,7 +26,13 @@ export default function WishlistPage() {
     let active = true;
     setLoading(true);
     getProductsByIds(ids)
-      .then((p) => active && setProducts(p))
+      .then((p) => {
+        if (!active) return;
+        setProducts(p);
+        // Remove favoritos órfãos (ids sem produto correspondente) para o
+        // contador do header refletir a lista realmente exibida.
+        useWishlistStore.getState().prune(p.map((x) => x.id));
+      })
       .catch(() => active && setProducts([]))
       .finally(() => active && setLoading(false));
     return () => {

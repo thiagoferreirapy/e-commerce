@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Product } from "@/types";
 import { useCartStore } from "@/store/cart";
 import { toast } from "@/store/toast";
-import { discountPercent } from "@/lib/format";
+import { resolveOffer } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { Rating } from "@/components/ui/Rating";
@@ -26,7 +26,8 @@ export function ProductCard({ product }: { product: Product }) {
   const brand = product.brand;
   const addItem = useCartStore((s) => s.addItem);
   const hasVariants = product.variantAxes.length > 0;
-  const off = discountPercent(product.listPrice, product.price);
+  const offer = resolveOffer(product);
+  const off = offer.off;
   const href = `/produto/${product.slug}`;
   const soldOut = product.totalStock <= 0;
 
@@ -103,17 +104,17 @@ export function ProductCard({ product }: { product: Product }) {
           <span className="text-2xs text-neutral-400">{product.reviewCount} aval.</span>
         </div>
 
-        {product.offerEndsAt && (
+        {offer.endsAt && (
           <div className="mt-2 flex items-center gap-1.5 text-xs text-flame-700">
             <span className="font-semibold">Termina em</span>
-            <Countdown endsAt={product.offerEndsAt} compact />
+            <Countdown endsAt={offer.endsAt} compact />
           </div>
         )}
 
         <div className="mt-auto pt-3">
           <PriceBlock
-            listPrice={product.listPrice}
-            price={product.price}
+            listPrice={offer.listPrice}
+            price={offer.price}
             size="sm"
             showInstallments
           />

@@ -23,7 +23,6 @@ export const benefits = [
   { icon: "truck", title: "Frete grátis", text: "Acima de R$ 299 no SEDEX" },
   { icon: "pix", title: "10% no Pix", text: "Desconto à vista" },
   { icon: "card", title: "Até 12x sem juros", text: "No cartão de crédito" },
-  { icon: "shield", title: "Compra segura", text: "Site protegido (SSL)" },
 ] as const;
 
 /** Estrutura do mega menu (categoria -> colunas/links). */

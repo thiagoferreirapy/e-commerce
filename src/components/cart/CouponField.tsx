@@ -1,18 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import type { Coupon } from "@/types";
+import type { CartItem, Coupon } from "@/types";
 import { applyCoupon } from "@/services/coupon";
 import { Button } from "@/components/ui/Button";
 import { CheckIcon, TagIcon, XIcon } from "@/components/ui/icons";
 
 export function CouponField({
-  subtotal,
+  items,
   applied,
   onApplied,
   onRemoved,
 }: {
-  subtotal: number;
+  items: CartItem[];
   applied: Coupon | null;
   onApplied: (coupon: Coupon) => void;
   onRemoved: () => void;
@@ -26,7 +26,7 @@ export function CouponField({
     setLoading(true);
     setError("");
     try {
-      const { coupon } = await applyCoupon(code, subtotal);
+      const { coupon } = await applyCoupon(code, items);
       onApplied(coupon);
       setCode("");
     } catch (err) {

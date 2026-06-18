@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { User } from "@/types";
-import { navigation } from "@/config/site";
+import type { NavCategory } from "@/services/catalog";
 import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/utils";
 import { Drawer } from "@/components/ui/Drawer";
@@ -13,18 +14,21 @@ export function MobileNav({
   open,
   onClose,
   user,
+  categories,
 }: {
   open: boolean;
   onClose: () => void;
   user: User | null;
+  categories: NavCategory[];
 }) {
   const logout = useAuthStore((s) => s.logout);
   const pathname = usePathname();
+  const [expanded, setExpanded] = useState<string | null>(null);
 
-  function isActive(g: (typeof navigation)[number]): boolean {
+  function isActive(cat: NavCategory): boolean {
     const path = (href: string) => href.split("?")[0];
-    if (pathname === path(g.href)) return true;
-    return g.columns?.some((c) => c.links.some((l) => pathname === path(l.href))) ?? false;
+    if (pathname === path(cat.href)) return true;
+    return cat.subcategories.some((s) => pathname === path(s.href));
   }
 
   return (
@@ -53,26 +57,69 @@ export function MobileNav({
           )}
         </div>
 
-        {/* Categorias */}
+        {/* Categorias (dinâmicas) */}
         <nav className="p-2">
-          {navigation.map((g) => {
-            const active = isActive(g);
+          {categories.map((cat) => {
+            const active = isActive(cat);
+            const hasSubs = cat.subcategories.length > 0;
+            const isOpen = expanded === cat.slug;
             return (
-              <Link
-                key={g.label}
-                href={g.href}
-                onClick={onClose}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex items-center justify-between rounded-md px-3 py-3 text-sm font-semibold hover:bg-neutral-100",
-                  active ? "bg-flame-50 text-flame-700" : "text-ink",
+              <div key={cat.slug}>
+                <div
+                  className={cn(
+                    "flex items-center rounded-md text-sm font-semibold hover:bg-neutral-100",
+                    active ? "bg-flame-50 text-flame-700" : "text-ink",
+                  )}
+                >
+                  <Link
+                    href={cat.href}
+                    onClick={onClose}
+                    aria-current={active ? "page" : undefined}
+                    className="flex-1 px-3 py-3"
+                  >
+                    {cat.label}
+                  </Link>
+                  {hasSubs ? (
+                    <button
+                      type="button"
+                      onClick={() => setExpanded(isOpen ? null : cat.slug)}
+                      aria-label={isOpen ? "Recolher" : "Expandir"}
+                      aria-expanded={isOpen}
+                      className="grid size-11 place-items-center text-neutral-400"
+                    >
+                      <ChevronRightIcon
+                        className={cn("size-4 transition-transform", isOpen && "rotate-90")}
+                      />
+                    </button>
+                  ) : (
+                    <ChevronRightIcon
+                      className={cn("mr-3 size-4", active ? "text-flame" : "text-neutral-300")}
+                    />
+                  )}
+                </div>
+
+                {hasSubs && isOpen && (
+                  <div className="mb-1 ml-3 border-l border-neutral-200 pl-3">
+                    {cat.subcategories.map((sub) => (
+                      <Link
+                        key={sub.href}
+                        href={sub.href}
+                        onClick={onClose}
+                        className="block rounded-md px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-flame"
+                      >
+                        {sub.label}
+                      </Link>
+                    ))}
+                    <Link
+                      href={cat.href}
+                      onClick={onClose}
+                      className="block rounded-md px-3 py-2 text-sm font-semibold text-flame hover:bg-neutral-100"
+                    >
+                      Ver tudo
+                    </Link>
+                  </div>
                 )}
-              >
-                {g.label}
-                <ChevronRightIcon
-                  className={cn("size-4", active ? "text-flame" : "text-neutral-300")}
-                />
-              </Link>
+              </div>
             );
           })}
           <Link

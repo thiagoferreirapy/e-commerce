@@ -10,6 +10,8 @@ interface WishlistState {
   hydrated: boolean;
   toggle: (productId: string) => void;
   has: (productId: string) => boolean;
+  /** Mantém apenas os ids informados (válidos), removendo órfãos do store e do servidor. */
+  prune: (validIds: string[]) => void;
   clear: () => void;
   mergeOnLogin: () => Promise<void>;
   loadFromServer: () => Promise<void>;
@@ -40,6 +42,20 @@ export const useWishlistStore = create<WishlistState>()(
       },
 
       has: (productId) => get().ids.includes(productId),
+
+      prune: (validIds) => {
+        const valid = new Set(validIds);
+        const removed = get().ids.filter((id) => !valid.has(id));
+        if (!removed.length) return; // nada órfão — evita re-render desnecessário
+        set({ ids: get().ids.filter((id) => valid.has(id)) });
+        // Logado: remove os órfãos no servidor também, senão loadFromServer os traz de volta.
+        if (authed()) {
+          for (const id of removed) {
+            apiFetch(`/wishlist/${id}`, { method: "DELETE" }).catch(() => {});
+          }
+        }
+      },
+
       clear: () => set({ ids: [] }),
 
       mergeOnLogin: async () => {

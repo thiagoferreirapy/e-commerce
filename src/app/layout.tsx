@@ -3,6 +3,7 @@ import { Montserrat, JetBrains_Mono } from "next/font/google";
 import { site } from "@/config/site";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { getNavCategories } from "@/services/catalog";
 import { ToastViewport } from "@/components/ui/ToastViewport";
 import { SyncProvider } from "@/components/system/SyncProvider";
 import { NavigationLoader } from "@/components/system/NavigationLoader";
@@ -42,7 +43,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Navegação de categorias dinâmica (vinda do banco/admin).
+  const navCategories = await getNavCategories();
+
   // Dados estruturados da organização (SEO).
   const orgJsonLd = {
     "@context": "https://schema.org",
@@ -60,7 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
         />
-        <Header />
+        <Header categories={navCategories} />
         <main className="flex-1">{children}</main>
         <Footer />
         <ToastViewport />

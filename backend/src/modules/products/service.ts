@@ -65,6 +65,9 @@ function applyFacetFilters(
 ): ProductWithRelations[] {
   return list.filter((p) => {
     if (q.brand && !q.brand.includes(p.brand.slug)) return false;
+    if (q.subcategory && !q.subcategory.some((s) => p.categorySlug === s || p.subcategorySlug === s)) {
+      return false;
+    }
     if (q.inStock && p.totalStock <= 0) return false;
     if (q.freeShipping && !p.freeShipping) return false;
     if (q.minPrice != null && p.price < q.minPrice) return false;
@@ -106,15 +109,26 @@ function sortProducts(list: ProductWithRelations[], sort: ProductQueryInput["sor
   }
 }
 
-function buildFacets(scoped: ProductWithRelations[]): ProductPageDTO["facets"] {
+function buildFacets(
+  scoped: ProductWithRelations[],
+  subDefs: { slug: string; name: string }[],
+): ProductPageDTO["facets"] {
   const brandMap = new Map<string, { name: string; count: number }>();
   const colorMap = new Map<string, { label: string; hex?: string; count: number }>();
   const sizeMap = new Map<string, number>();
+  const subMap = new Map<string, number>();
 
   for (const p of scoped) {
     const cur = brandMap.get(p.brand.slug) ?? { name: p.brand.name, count: 0 };
     cur.count++;
     brandMap.set(p.brand.slug, cur);
+
+    // Conta a quais subcategorias (da categoria atual) o produto pertence.
+    for (const sub of subDefs) {
+      if (p.categorySlug === sub.slug || p.subcategorySlug === sub.slug) {
+        subMap.set(sub.slug, (subMap.get(sub.slug) ?? 0) + 1);
+      }
+    }
     // facetas de variante usam o DTO para obter label/hex consistentes
     const dto = toProductDTO(p);
     const colorAxis = dto.variantAxes.find((a) => a.axis === "color");
@@ -131,6 +145,10 @@ function buildFacets(scoped: ProductWithRelations[]): ProductPageDTO["facets"] {
     brands: [...brandMap.entries()]
       .map(([slug, v]) => ({ slug, name: v.name, count: v.count }))
       .sort((a, b) => a.name.localeCompare(b.name)),
+    // Mantém a ordem de subDefs (destaque/posição/nome do banco); só as com produtos.
+    subcategories: subDefs
+      .map((s) => ({ slug: s.slug, name: s.name, count: subMap.get(s.slug) ?? 0 }))
+      .filter((s) => s.count > 0),
     colors: [...colorMap.entries()]
       .map(([value, v]) => ({ value, label: v.label, hex: v.hex, count: v.count }))
       .sort((a, b) => b.count - a.count),
@@ -144,6 +162,16 @@ export async function listProducts(query: ProductQueryInput): Promise<ProductPag
   const scoped = await loadScoped(query);
   const filtered = applyFacetFilters(scoped, query);
   const sorted = sortProducts(filtered, query.sort);
+
+  // Subcategorias da categoria atual (para a faceta de subcategoria), ordenadas
+  // como aparecem no menu (destaque/posição/nome).
+  const subDefs = query.category
+    ? await prisma.category.findMany({
+        where: { parentSlug: query.category },
+        select: { slug: true, name: true },
+        orderBy: [{ featured: "desc" }, { position: "asc" }, { name: "asc" }],
+      })
+    : [];
 
   const total = sorted.length;
   const pageCount = Math.max(1, Math.ceil(total / query.pageSize));
@@ -164,7 +192,7 @@ export async function listProducts(query: ProductQueryInput): Promise<ProductPag
     pageSize: query.pageSize,
     pageCount,
     priceBounds,
-    facets: buildFacets(scoped),
+    facets: buildFacets(scoped, subDefs),
   };
 }
 

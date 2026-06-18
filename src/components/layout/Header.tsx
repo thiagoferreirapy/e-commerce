@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { navigation, benefits } from "@/config/site";
+import { benefits } from "@/config/site";
+import type { NavCategory } from "@/services/catalog";
 import { useCartStore, selectCount } from "@/store/cart";
 import { useWishlistStore } from "@/store/wishlist";
 import { useAuthStore } from "@/store/auth";
@@ -14,6 +15,7 @@ import { SearchBox } from "./SearchBox";
 import { MobileNav } from "./MobileNav";
 import {
   CartIcon,
+  ChevronDownIcon,
   HeartIcon,
   MenuIcon,
   PixIcon,
@@ -23,6 +25,10 @@ import {
   UserIcon,
 } from "@/components/ui/icons";
 
+/** Quantas categorias-raiz aparecem direto na barra; o resto vai para "Mais". */
+const MAX_VISIBLE_CATEGORIES = 5;
+const MORE_KEY = "__more__";
+
 const benefitIcons = {
   truck: TruckIcon,
   pix: PixIcon,
@@ -30,7 +36,7 @@ const benefitIcons = {
   shield: ShieldIcon,
 };
 
-export function Header() {
+export function Header({ categories }: { categories: NavCategory[] }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const mounted = useMounted();
@@ -42,13 +48,15 @@ export function Header() {
 
   // Categoria ativa = rota atual bate com o link do grupo OU com algum link de
   // suas colunas (subcategorias), ignorando a query string.
-  function isActiveGroup(group: (typeof navigation)[number]): boolean {
+  function isActiveGroup(cat: NavCategory): boolean {
     const path = (href: string) => href.split("?")[0];
-    if (pathname === path(group.href)) return true;
-    return (
-      group.columns?.some((col) => col.links.some((l) => pathname === path(l.href))) ?? false
-    );
+    if (pathname === path(cat.href)) return true;
+    return cat.subcategories.some((s) => pathname === path(s.href));
   }
+
+  // Mostra as primeiras na barra; o excedente vai para o botão "Mais".
+  const visibleCategories = categories.slice(0, MAX_VISIBLE_CATEGORIES);
+  const overflowCategories = categories.slice(MAX_VISIBLE_CATEGORIES);
 
   return (
     <header className="sticky top-0 z-50 bg-white">
@@ -114,60 +122,104 @@ export function Header() {
         </div>
       </div>
 
-      {/* Navegação de categorias (desktop) com mega menu */}
+      {/* Navegação de categorias (desktop) — dinâmica (categorias do banco) com mega menu */}
       <div className="hidden border-b border-neutral-200 bg-white lg:block">
         <div
           className="container-page flex items-center gap-1"
           onMouseLeave={() => setOpenMenu(null)}
         >
-          {navigation.map((group) => {
+          {visibleCategories.map((group) => {
             const active = isActiveGroup(group);
+            const hasSubs = group.subcategories.length > 0;
             return (
-            <div
-              key={group.label}
-              className="relative"
-              onMouseEnter={() => setOpenMenu(group.label)}
-            >
-              <Link
-                href={group.href}
-                aria-current={active ? "page" : undefined}
+              <div
+                key={group.slug}
+                className="relative"
+                onMouseEnter={() => setOpenMenu(group.label)}
+              >
+                <Link
+                  href={group.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex items-center gap-1 border-b-2 px-3.5 py-3 text-sm font-semibold transition-colors",
+                    active || (hasSubs && openMenu === group.label)
+                      ? "border-flame text-flame"
+                      : "border-transparent " +
+                      (openMenu === group.label ? "text-flame" : "text-ink hover:text-flame"),
+                  )}
+                >
+                  {group.label}
+                </Link>
+
+                {hasSubs && openMenu === group.label && (
+                  <div className="absolute left-0 top-full z-50 min-w-[22rem] rounded-b-lg border border-t-0 border-neutral-200 bg-white p-5 shadow-lg animate-fade-in">
+                    <p className="eyebrow mb-3">{group.label}</p>
+                    <ul className="grid grid-cols-2 gap-x-8 gap-y-2">
+                      {group.subcategories.map((sub) => (
+                        <li key={sub.href}>
+                          <Link
+                            href={sub.href}
+                            className="text-sm text-neutral-600 hover:text-flame"
+                          >
+                            {sub.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                    <Link
+                      href={group.href}
+                      className="mt-4 inline-block text-sm font-semibold text-flame hover:underline"
+                    >
+                      Ver tudo em {group.label}
+                    </Link>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Botão "Mais" — categorias que não couberam na barra */}
+          {overflowCategories.length > 0 && (
+            <div className="relative" onMouseEnter={() => setOpenMenu(MORE_KEY)}>
+              <button
+                type="button"
+                aria-haspopup="true"
+                aria-expanded={openMenu === MORE_KEY}
                 className={cn(
                   "flex items-center gap-1 border-b-2 px-3.5 py-3 text-sm font-semibold transition-colors",
-                  active
+                  openMenu === MORE_KEY
                     ? "border-flame text-flame"
-                    : "border-transparent " +
-                        (openMenu === group.label ? "text-flame" : "text-ink hover:text-flame"),
+                    : "border-transparent text-ink hover:text-flame",
                 )}
               >
-                {group.label}
-              </Link>
+                Mais
+                <ChevronDownIcon className="size-4" />
+              </button>
 
-              {group.columns && openMenu === group.label && (
-                <div className="absolute left-0 top-full z-50 min-w-[26rem] rounded-b-lg border border-t-0 border-neutral-200 bg-white p-6 shadow-lg animate-fade-in">
-                  <div className="grid grid-cols-2 gap-8">
-                    {group.columns.map((col) => (
-                      <div key={col.title}>
-                        <p className="eyebrow mb-3">{col.title}</p>
-                        <ul className="space-y-2">
-                          {col.links.map((l) => (
-                            <li key={l.href}>
-                              <Link
-                                href={l.href}
-                                className="text-sm text-neutral-600 hover:text-flame"
-                              >
-                                {l.label}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+              {openMenu === MORE_KEY && (
+                <div className="absolute left-0 top-full z-50 max-h-[70vh] min-w-[16rem] overflow-y-auto rounded-b-lg border border-t-0 border-neutral-200 bg-white p-5 shadow-lg animate-fade-in">
+                  <p className="eyebrow mb-3">Mais categorias</p>
+                  <ul className="grid grid-cols-2 gap-x-8 gap-y-2">
+                    {overflowCategories.map((cat) => (
+                      <li key={cat.slug}>
+                        <Link
+                          href={cat.href}
+                          aria-current={isActiveGroup(cat) ? "page" : undefined}
+                          className={cn(
+                            "text-sm hover:text-flame",
+                            isActiveGroup(cat) ? "font-semibold text-flame" : "text-neutral-600",
+                          )}
+                        >
+                          {cat.label}
+                        </Link>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
               )}
             </div>
-            );
-          })}
+          )}
+
           <Link
             href="/ofertas"
             className="ml-auto flex items-center gap-1.5 px-3.5 py-3 text-sm font-bold text-flame"
@@ -178,7 +230,12 @@ export function Header() {
         </div>
       </div>
 
-      <MobileNav open={mobileOpen} onClose={() => setMobileOpen(false)} user={user && mounted ? user : null} />
+      <MobileNav
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        user={user && mounted ? user : null}
+        categories={categories}
+      />
     </header>
   );
 }

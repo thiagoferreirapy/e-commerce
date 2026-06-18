@@ -7,6 +7,7 @@ import { BrandStrip } from "@/components/home/BrandStrip";
 import { ProductCarousel } from "@/components/product/ProductCarousel";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Countdown } from "@/components/ui/Countdown";
+import { isOfferExpired } from "@/lib/format";
 
 // Vitrines vêm da API em tempo de requisição.
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function HomePage() {
     novidades: [],
     descontos: [],
   }));
-  const offerEnds = ofertas.find((p) => p.offerEndsAt)?.offerEndsAt;
+  const offerEnds = ofertas.find((p) => p.offerEndsAt && !isOfferExpired(p.offerEndsAt))?.offerEndsAt;
 
   return (
     <>

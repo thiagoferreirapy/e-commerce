@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { PriceRange } from "./PriceRange";
 
 export interface CatalogFilters {
+  subcategories: string[];
   brandSlugs: string[];
   colors: string[];
   sizes: string[];
@@ -29,13 +30,17 @@ export function FilterSidebar({
   onChange: (next: CatalogFilters) => void;
   onClear: () => void;
 }) {
-  const toggle = <K extends "brandSlugs" | "colors" | "sizes">(key: K, value: string) => {
+  const toggle = <K extends "subcategories" | "brandSlugs" | "colors" | "sizes">(
+    key: K,
+    value: string,
+  ) => {
     const set = new Set(filters[key]);
     set.has(value) ? set.delete(value) : set.add(value);
     onChange({ ...filters, [key]: [...set] });
   };
 
   const activeCount =
+    filters.subcategories.length +
     filters.brandSlugs.length +
     filters.colors.length +
     filters.sizes.length +
@@ -54,6 +59,22 @@ export function FilterSidebar({
           </button>
         )}
       </div>
+
+      {facets.subcategories.length > 0 && (
+        <Section title="Subcategoria">
+          <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+            {facets.subcategories.map((s) => (
+              <Check
+                key={s.slug}
+                label={s.name}
+                count={s.count}
+                checked={filters.subcategories.includes(s.slug)}
+                onChange={() => toggle("subcategories", s.slug)}
+              />
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Section title="Disponibilidade">
         <Check
@@ -190,6 +211,10 @@ function Check({
         type={type}
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
+        // Radio não dispara onChange ao reclicar já marcado; o clique permite desmarcar.
+        onClick={() => {
+          if (type === "radio" && checked) onChange(false);
+        }}
         className={cn(
           "size-4 shrink-0 border-neutral-300 text-flame focus:ring-flame/30",
           type === "radio" ? "rounded-full" : "rounded",

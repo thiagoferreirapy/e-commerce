@@ -1,4 +1,4 @@
-import type { Coupon, OrderStatus, PaymentMethod, Product } from "@/types";
+import type { Coupon, CouponScope, OrderStatus, PaymentMethod, Product } from "@/types";
 import { apiFetch, toQuery } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
@@ -157,6 +157,11 @@ export interface CouponInput {
   value: number;
   minSubtotal?: number | null;
   description: string;
+  scope: CouponScope;
+  scopeValue?: string | null;
+  maxUses?: number | null;
+  startsAt?: string | null;
+  expiresAt?: string | null;
 }
 export function listAdminCoupons(): Promise<Coupon[]> {
   return apiFetch<Coupon[]>("/admin/coupons");
@@ -169,4 +174,65 @@ export function updateCoupon(code: string, input: Partial<CouponInput>): Promise
 }
 export function deleteCoupon(code: string): Promise<void> {
   return apiFetch<void>(`/admin/coupons/${code}`, { method: "DELETE" });
+}
+
+/* ---- Marcas ---- */
+export interface AdminBrandRow {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string;
+  productCount: number;
+}
+export interface BrandInput {
+  name: string;
+  slug: string;
+  logoUrl?: string | null;
+}
+export function listAdminBrands(): Promise<AdminBrandRow[]> {
+  return apiFetch<AdminBrandRow[]>("/admin/brands");
+}
+export function createBrand(input: BrandInput): Promise<AdminBrandRow> {
+  return apiFetch<AdminBrandRow>("/admin/brands", { method: "POST", body: input });
+}
+export function updateBrand(id: string, input: BrandInput): Promise<AdminBrandRow> {
+  return apiFetch<AdminBrandRow>(`/admin/brands/${id}`, { method: "PUT", body: input });
+}
+export function deleteBrand(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/brands/${id}`, { method: "DELETE" });
+}
+
+/* ---- Categorias ---- */
+export interface AdminCategoryRow {
+  id: string;
+  name: string;
+  slug: string;
+  parentSlug: string | null;
+  imageUrl: string;
+  description: string | null;
+  featured: boolean;
+  position: number;
+  productCount: number;
+  subcategoryCount: number;
+}
+export interface CategoryInput {
+  name: string;
+  slug: string;
+  parentSlug?: string | null;
+  imageUrl?: string | null;
+  description?: string | null;
+  featured: boolean;
+  position: number;
+}
+export function listAdminCategories(): Promise<AdminCategoryRow[]> {
+  return apiFetch<AdminCategoryRow[]>("/admin/categories");
+}
+export function createCategory(input: CategoryInput): Promise<AdminCategoryRow> {
+  return apiFetch<AdminCategoryRow>("/admin/categories", { method: "POST", body: input });
+}
+export function updateCategory(id: string, input: CategoryInput): Promise<AdminCategoryRow> {
+  return apiFetch<AdminCategoryRow>(`/admin/categories/${id}`, { method: "PUT", body: input });
+}
+export function deleteCategory(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/categories/${id}`, { method: "DELETE" });
 }

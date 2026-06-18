@@ -22,6 +22,8 @@ export interface CategoryDTO {
   parentSlug?: string;
   imageUrl: string;
   description?: string;
+  featured: boolean;
+  position: number;
 }
 
 export interface VariantOptionDTO {
@@ -94,6 +96,7 @@ export interface ProductPageDTO {
   priceBounds: { min: number; max: number };
   facets: {
     brands: { slug: string; name: string; count: number }[];
+    subcategories: { slug: string; name: string; count: number }[];
     colors: { value: string; label: string; hex?: string; count: number }[];
     sizes: { value: string; count: number }[];
   };

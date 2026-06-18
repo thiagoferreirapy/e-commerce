@@ -8,7 +8,9 @@ export const categoriesRouter = Router();
 categoriesRouter.get(
   "/",
   asyncHandler(async (_req, res) => {
-    const cats = await prisma.category.findMany();
+    const cats = await prisma.category.findMany({
+      orderBy: [{ featured: "desc" }, { position: "asc" }, { name: "asc" }],
+    });
     const dto: CategoryDTO[] = cats.map((c) => ({
       id: c.id,
       name: c.name,
@@ -16,6 +18,8 @@ categoriesRouter.get(
       parentSlug: c.parentSlug ?? undefined,
       imageUrl: c.imageUrl,
       description: c.description ?? undefined,
+      featured: c.featured,
+      position: c.position,
     }));
     res.json(dto);
   }),

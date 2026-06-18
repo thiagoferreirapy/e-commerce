@@ -1,4 +1,4 @@
-import type { Product, ProductTag } from "@/types";
+import type { Category, Product, ProductTag } from "@/types";
 import { apiFetch, toQuery } from "@/lib/api";
 // Categorias e marcas são dados de referência estáticos (espelham o banco) e
 // seguem sendo lidos localmente para metadata/navegação/SSG.
@@ -15,6 +15,7 @@ export type SortKey =
 
 export interface ProductFilters {
   categorySlug?: string;
+  subcategories?: string[];
   brandSlugs?: string[];
   inStock?: boolean;
   minPrice?: number;
@@ -43,6 +44,7 @@ export interface ProductPage {
   priceBounds: { min: number; max: number };
   facets: {
     brands: { slug: string; name: string; count: number }[];
+    subcategories: { slug: string; name: string; count: number }[];
     colors: { value: string; label: string; hex?: string; count: number }[];
     sizes: { value: string; count: number }[];
   };
@@ -52,6 +54,7 @@ export interface ProductPage {
 export async function listProducts(query: ProductQuery = {}): Promise<ProductPage> {
   const qs = toQuery({
     category: query.categorySlug,
+    subcategory: query.subcategories,
     brand: query.brandSlugs,
     color: query.colors,
     size: query.sizes,
@@ -128,6 +131,60 @@ export async function getAllCategories() {
 }
 export async function getAllBrands() {
   return brands;
+}
+
+/**
+ * Categoria + trilha (breadcrumb) a partir do slug, vindo do banco (dinâmico).
+ * Fallback para os dados estáticos se a API falhar. Retorna null se não existir.
+ */
+export async function getCategoryContext(
+  slug: string,
+): Promise<{ category: Category; trail: Category[] } | null> {
+  let all: Category[];
+  try {
+    all = await apiFetch<Category[]>(`/categories`);
+  } catch {
+    all = categories; // fallback estático (categorias semeadas)
+  }
+  const bySlug = new Map(all.map((c) => [c.slug, c]));
+  const category = bySlug.get(slug);
+  if (!category) return null;
+  let trail: Category[] = [category];
+  if (category.parentSlug) {
+    const parent = bySlug.get(category.parentSlug);
+    if (parent) trail = [parent, category];
+  }
+  return { category, trail };
+}
+
+export interface NavCategory {
+  label: string;
+  slug: string;
+  href: string;
+  subcategories: { label: string; href: string }[];
+}
+
+/**
+ * Monta a navegação do header a partir das categorias do banco (dinâmica):
+ * cada categoria-raiz vira um item principal com suas subcategorias.
+ * Resiliente: se a API falhar, devolve lista vazia (a página ainda renderiza).
+ */
+export async function getNavCategories(): Promise<NavCategory[]> {
+  try {
+    const cats = await apiFetch<Category[]>(`/categories`);
+    return cats
+      .filter((c) => !c.parentSlug)
+      .map((root) => ({
+        label: root.name,
+        slug: root.slug,
+        href: `/categoria/${root.slug}`,
+        subcategories: cats
+          .filter((c) => c.parentSlug === root.slug)
+          .map((c) => ({ label: c.name, href: `/categoria/${c.slug}` })),
+      }));
+  } catch {
+    return [];
+  }
 }
 
 export { getCategory, getSubcategories, getBrand };

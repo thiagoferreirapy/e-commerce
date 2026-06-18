@@ -24,6 +24,32 @@ export function discountPercent(listPrice: number, price: number): number {
   return Math.round((1 - price / listPrice) * 100);
 }
 
+/** Oferta com prazo: expira quando offerEndsAt existe e já passou. */
+export function isOfferExpired(offerEndsAt?: string | null): boolean {
+  return !!offerEndsAt && new Date(offerEndsAt).getTime() <= Date.now();
+}
+
+/**
+ * Estado de oferta exibível. Se o prazo passou, reverte ao preço cheio (sem
+ * desconto, sem countdown). Sem offerEndsAt = oferta sem prazo (segue valendo).
+ * Avaliado no render — atualiza ao recarregar a página/filtro.
+ */
+export function resolveOffer(p: {
+  listPrice: number;
+  price: number;
+  offerEndsAt?: string | null;
+}): { expired: boolean; price: number; listPrice: number; off: number; endsAt?: string } {
+  const expired = isOfferExpired(p.offerEndsAt);
+  const price = expired ? p.listPrice : p.price;
+  return {
+    expired,
+    price,
+    listPrice: p.listPrice,
+    off: discountPercent(p.listPrice, price),
+    endsAt: expired ? undefined : (p.offerEndsAt ?? undefined),
+  };
+}
+
 /** Desconto à vista no Pix (config padrão da loja: 10%). */
 export const PIX_DISCOUNT = 0.1;
 

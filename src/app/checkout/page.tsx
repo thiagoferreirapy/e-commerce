@@ -83,16 +83,16 @@ export default function CheckoutPage() {
 
   const [coupon, setCoupon] = useState<Coupon | null>(null);
   useEffect(() => {
-    if (couponCode && totals.subtotal > 0) {
-      applyCoupon(couponCode, totals.subtotal)
+    if (couponCode && items.length > 0) {
+      applyCoupon(couponCode, items)
         .then((r) => setCoupon(r.coupon))
         .catch(() => setCoupon(null));
     } else {
       setCoupon(null);
     }
-  }, [couponCode, totals.subtotal]);
+  }, [couponCode, items]);
 
-  const discount = coupon ? couponDiscount(coupon, totals.subtotal) : 0;
+  const discount = coupon ? couponDiscount(coupon, lines) : 0;
   const shipCost = shipping?.price ?? 0;
   const baseTotal = round2(totals.subtotal - discount + shipCost);
   const pixTotal = round2(pixPrice(totals.subtotal - discount) + shipCost);

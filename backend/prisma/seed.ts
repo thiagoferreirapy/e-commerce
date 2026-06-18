@@ -84,6 +84,11 @@ async function main() {
       value: c.value,
       minSubtotal: c.minSubtotal ?? null,
       description: c.description,
+      scope: c.scope ?? "all",
+      scopeValue: c.scopeValue ?? null,
+      maxUses: c.maxUses ?? null,
+      startsAt: c.startsAt ? new Date(c.startsAt) : null,
+      expiresAt: c.expiresAt ? new Date(c.expiresAt) : null,
     })),
   });
 
