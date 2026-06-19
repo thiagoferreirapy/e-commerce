@@ -74,7 +74,7 @@ export default function CartPage() {
     e.preventDefault();
     setShippingLoading(true);
     try {
-      const quote = await calculateShipping(cep, totals.subtotal);
+      const quote = await calculateShipping(cep, totals.subtotal, items);
       setShippingOptions(quote.options);
       setSelectedShipping(quote.options[0]);
     } catch {

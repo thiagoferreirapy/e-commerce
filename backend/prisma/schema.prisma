@@ -249,6 +249,18 @@ model NewsletterSubscriber {
   createdAt DateTime @default(now())
 }
 
+// Métodos de entrega gerenciáveis pelo admin (frete plano).
+model ShippingMethod {
+  id        String  @id @default(cuid())
+  name      String
+  price     Float
+  etaDays   Int
+  // Frete grátis quando o subtotal atinge este valor (null = nunca por valor).
+  freeAbove Float?
+  active    Boolean @default(true)
+  position  Int     @default(0)
+}
+
 model PasswordResetToken {
   id        String   @id @default(cuid())
   userId    String

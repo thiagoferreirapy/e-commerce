@@ -47,6 +47,16 @@ async function main() {
   await prisma.brand.deleteMany();
   await prisma.seller.deleteMany();
   await prisma.newsletterSubscriber.deleteMany();
+  await prisma.shippingMethod.deleteMany();
+
+  console.log("Métodos de entrega…");
+  await prisma.shippingMethod.createMany({
+    data: [
+      { name: "PAC", price: 24.9, etaDays: 6, freeAbove: null, active: true, position: 1 },
+      { name: "SEDEX", price: 39.9, etaDays: 3, freeAbove: 299, active: true, position: 2 },
+      { name: "Entrega Expressa", price: 59.9, etaDays: 1, freeAbove: null, active: true, position: 3 },
+    ],
+  });
 
   console.log("Marcas…");
   await prisma.brand.createMany({

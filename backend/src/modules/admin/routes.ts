@@ -7,6 +7,7 @@ import { adminStatsRouter } from "./stats";
 import { adminUploadsRouter } from "./uploads";
 import { adminBrandsRouter } from "./brands";
 import { adminCategoriesRouter } from "./categories";
+import { adminShippingRouter } from "./shipping";
 
 export const adminRouter = Router();
 
@@ -20,3 +21,4 @@ adminRouter.use("/coupons", adminCouponsRouter);
 adminRouter.use("/uploads", adminUploadsRouter);
 adminRouter.use("/brands", adminBrandsRouter);
 adminRouter.use("/categories", adminCategoriesRouter);
+adminRouter.use("/shipping", adminShippingRouter);

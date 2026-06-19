@@ -108,8 +108,9 @@ export async function createOrder(input: CreateOrderInput, userId?: string) {
     appliedCouponCode = result.coupon.code;
   }
 
-  // Frete a partir do CEP + opção escolhida.
-  const quote = quoteShipping(input.address.cep, subtotal);
+  // Frete grátis se todos os itens têm o selo; cota a partir dos métodos cadastrados.
+  const freeShipping = lines.length > 0 && lines.every((l) => l.product.freeShipping);
+  const quote = await quoteShipping({ cep: input.address.cep, subtotal, freeShipping });
   const option = quote.options.find((o) => o.id === input.shippingId);
   if (!option) throw BadRequest("Opção de frete inválida.");
   const shipping = option.price;

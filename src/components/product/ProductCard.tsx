@@ -60,7 +60,12 @@ export function ProductCard({ product }: { product: Product }) {
 
       {/* Favoritar topo-direita (acima do link que cobre o card) */}
       <div className="absolute right-3 top-3 z-20">
-        <WishlistButton productId={product.id} productName={product.name} size="sm" />
+        <WishlistButton
+          productId={product.id}
+          productName={product.name}
+          size="sm"
+          highlightBorder={false}
+        />
       </div>
 
       {/* Imagem (sem link próprio — o card todo é clicável via stretched link) */}

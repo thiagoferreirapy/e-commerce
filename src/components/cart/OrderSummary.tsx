@@ -46,7 +46,7 @@ export function OrderSummary({
         <span className="text-2xl font-extrabold text-ink">{formatBRL(total)}</span>
       </div>
       <p className="mt-1 flex items-center justify-end gap-1 text-sm font-semibold text-success">
-        <PixIcon className="size-4" />
+        {/* <PixIcon className="size-4" /> */}
         {formatBRL(pixTotal)}{" "}
         <span className="font-normal text-neutral-500">à vista no Pix</span>
       </p>

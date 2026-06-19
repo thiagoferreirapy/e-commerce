@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/States";
 import { Stepper } from "@/components/checkout/Stepper";
 import { OrderSummary } from "@/components/cart/OrderSummary";
+import { CouponField } from "@/components/cart/CouponField";
 import { CartIcon, CheckIcon, PixIcon } from "@/components/ui/icons";
 
 const STEPS = ["Identificação", "Endereço", "Frete", "Pagamento", "Revisão"];
@@ -37,6 +38,7 @@ export default function CheckoutPage() {
   const mounted = useMounted();
   const items = useCartStore((s) => s.items);
   const couponCode = useCartStore((s) => s.couponCode);
+  const setStoredCoupon = useCartStore((s) => s.setCoupon);
   const clear = useCartStore((s) => s.clear);
   const user = useAuthStore((s) => s.user);
 
@@ -140,7 +142,7 @@ export default function CheckoutPage() {
   async function loadShipping() {
     setShippingLoading(true);
     try {
-      const quote = await calculateShipping(addr.cep, totals.subtotal);
+      const quote = await calculateShipping(addr.cep, totals.subtotal, items);
       setShippingOptions(quote.options);
       setShipping(quote.options[0]);
     } catch {
@@ -495,7 +497,19 @@ export default function CheckoutPage() {
         </div>
 
         {/* Resumo lateral */}
-        <aside className="lg:sticky lg:top-28 lg:self-start">
+        <aside className="space-y-4 lg:sticky lg:top-28 lg:self-start">
+          <CouponField
+            items={items}
+            applied={coupon}
+            onApplied={(c) => {
+              setCoupon(c);
+              setStoredCoupon(c.code);
+            }}
+            onRemoved={() => {
+              setCoupon(null);
+              setStoredCoupon(null);
+            }}
+          />
           <OrderSummary
             subtotal={totals.subtotal}
             discount={discount}
