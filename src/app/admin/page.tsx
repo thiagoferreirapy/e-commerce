@@ -8,16 +8,25 @@ import { Badge } from "@/components/ui/Badge";
 import { AreaTrend, Donut, HBars, FLAME, INK } from "@/components/admin/AdminCharts";
 
 const STATUS_TONE: Record<string, "success" | "ink" | "warning" | "danger" | "neutral"> = {
+  aguardando_pagamento: "neutral",
   entregue: "success",
   enviado: "ink",
   pago: "warning",
   cancelado: "danger",
 };
 const STATUS_COLOR: Record<string, string> = {
+  aguardando_pagamento: "#A8A096",
   entregue: "#1F9D55",
   enviado: INK,
   pago: "#D9920B",
   cancelado: "#D92D20",
+};
+const STATUS_LABEL: Record<string, string> = {
+  aguardando_pagamento: "Aguardando pagamento",
+  pago: "Pago",
+  enviado: "Enviado",
+  entregue: "Entregue",
+  cancelado: "Cancelado",
 };
 const PAYMENT_COLOR: Record<string, string> = { pix: "#1F9D55", cartao: INK, boleto: "#D9920B" };
 const PAYMENT_LABEL: Record<string, string> = { pix: "Pix", cartao: "Cartão", boleto: "Boleto" };
@@ -177,7 +186,7 @@ export default function AdminDashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Pedidos por status">
           {stats.statusCounts.length ? (
-            <Donut data={stats.statusCounts} valueKey="count" nameKey="status" colors={stats.statusCounts.map((s) => STATUS_COLOR[s.status] ?? "#A8A096")} valueFormatter={(v) => `${v} pedido(s)`} />
+            <Donut data={stats.statusCounts.map((s) => ({ ...s, label: STATUS_LABEL[s.status] ?? s.status }))} valueKey="count" nameKey="label" colors={stats.statusCounts.map((s) => STATUS_COLOR[s.status] ?? "#A8A096")} valueFormatter={(v) => `${v} pedido(s)`} />
           ) : (
             <Empty>Nenhum pedido ainda.</Empty>
           )}
@@ -315,7 +324,7 @@ export default function AdminDashboard() {
                       <span className="whitespace-nowrap text-sm font-bold text-ink">
                         {formatBRL(o.total)}
                       </span>
-                      <Badge tone={STATUS_TONE[o.status] ?? "neutral"}>{o.status}</Badge>
+                      <Badge tone={STATUS_TONE[o.status] ?? "neutral"}>{STATUS_LABEL[o.status] ?? o.status}</Badge>
                     </span>
                   </Link>
                 </li>

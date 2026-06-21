@@ -18,10 +18,15 @@ import { ordersRouter } from "./modules/orders/routes";
 import { cartRouter } from "./modules/cart/routes";
 import { wishlistRouter } from "./modules/wishlist/routes";
 import { adminRouter } from "./modules/admin/routes";
+import { asaasWebhookRouter } from "./modules/webhooks/asaas";
 import { UPLOADS_DIR } from "./modules/admin/uploads";
 
 export function createApp() {
   const app = express();
+
+  // Atrás de proxy (ngrok/produção): usa X-Forwarded-* para IP e protocolo
+  // (corrige o rate-limit e habilita cookies Secure quando o front é HTTPS).
+  app.set("trust proxy", 1);
 
   // CORS com suporte a credenciais (cookies). Com credenciais não se pode usar
   // "*" literal — então refletimos a origem permitida.
@@ -58,6 +63,7 @@ export function createApp() {
   app.use("/api/cart", cartRouter);
   app.use("/api/wishlist", wishlistRouter);
   app.use("/api/admin", adminRouter);
+  app.use("/api/webhooks/asaas", asaasWebhookRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

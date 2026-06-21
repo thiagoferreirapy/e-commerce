@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import type { Coupon, PaymentMethod, Product, ShippingOption } from "@/types";
+import type { Coupon, Order, PaymentMethod, Product, ShippingOption } from "@/types";
 import { useCartStore } from "@/store/cart";
 import { useAuthStore } from "@/store/auth";
 import { toast } from "@/store/toast";
@@ -18,8 +18,10 @@ import { placeOrder } from "@/services/orders";
 import {
   formatBRL,
   formatCEP,
+  formatCPF,
   formatInstallments,
   installments,
+  isValidCPF,
   pixPrice,
   round2,
 } from "@/lib/format";
@@ -30,6 +32,7 @@ import { EmptyState } from "@/components/ui/States";
 import { Stepper } from "@/components/checkout/Stepper";
 import { OrderSummary } from "@/components/cart/OrderSummary";
 import { CouponField } from "@/components/cart/CouponField";
+import { PixPayment } from "@/components/checkout/PixPayment";
 import { CartIcon, CheckIcon, PixIcon } from "@/components/ui/icons";
 
 const STEPS = ["Identificação", "Endereço", "Frete", "Pagamento", "Revisão"];
@@ -49,7 +52,7 @@ export default function CheckoutPage() {
     let active = true;
     getProductsByIds(ids)
       .then((products) => active && setProductsMap(new Map(products.map((p) => [p.id, p]))))
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       active = false;
     };
@@ -60,6 +63,8 @@ export default function CheckoutPage() {
 
   const [step, setStep] = useState(1);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
+  const [paid, setPaid] = useState(false);
   const [placing, setPlacing] = useState(false);
 
   // Identificação
@@ -82,6 +87,12 @@ export default function CheckoutPage() {
   // Pagamento
   const [payment, setPayment] = useState<PaymentMethod>("pix");
   const [installmentCount, setInstallmentCount] = useState(1);
+  const [cpf, setCpf] = useState("");
+
+  // Pré-preenche o CPF do usuário logado (se houver).
+  useEffect(() => {
+    if (user?.cpf) setCpf(formatCPF(user.cpf));
+  }, [user]);
 
   const [coupon, setCoupon] = useState<Coupon | null>(null);
   useEffect(() => {
@@ -154,9 +165,14 @@ export default function CheckoutPage() {
 
   async function confirm() {
     if (!shipping) return;
+    if (payment === "pix" && !isValidCPF(cpf)) {
+      toast.error("Informe um CPF válido para pagar com Pix.");
+      setStep(4);
+      return;
+    }
     setPlacing(true);
     try {
-      const { orderNumber } = await placeOrder({
+      const { order } = await placeOrder({
         items: items.map((i) => ({
           productId: i.productId,
           variantId: i.variantId,
@@ -176,8 +192,10 @@ export default function CheckoutPage() {
         installments: payment === "cartao" ? installmentCount : undefined,
         shippingId: shipping.id,
         couponCode: couponCode ?? undefined,
+        cpf: payment === "pix" ? cpf : undefined,
       });
-      setOrderNumber(orderNumber);
+      setPlacedOrder(order);
+      setOrderNumber(order.number);
       clear();
       setStep(6);
     } catch (err) {
@@ -191,7 +209,12 @@ export default function CheckoutPage() {
     return <div className="container-page py-16 text-center text-neutral-400">Carregando…</div>;
   }
 
-  // Confirmação
+  // Pix: tela de pagamento (QR + copia-e-cola + polling) até confirmar.
+  if (step === 6 && placedOrder && placedOrder.payment === "pix" && !paid) {
+    return <PixPayment order={placedOrder} onPaid={() => setPaid(true)} />;
+  }
+
+  // Confirmação (cartão/boleto mock, ou Pix já confirmado).
   if (step === 6 && orderNumber) {
     return (
       <div className="container-page py-16">
@@ -199,17 +222,23 @@ export default function CheckoutPage() {
           <span className="mx-auto grid size-16 place-items-center rounded-full bg-success text-white">
             <CheckIcon className="size-8" />
           </span>
-          <h1 className="mt-5 text-2xl font-extrabold text-ink">Pedido confirmado!</h1>
+          <h1 className="mt-5 text-2xl font-extrabold text-ink">
+            {paid ? "Pagamento confirmado!" : "Pedido confirmado!"}
+          </h1>
           <p className="mt-2 text-sm text-neutral-500">
             Recebemos seu pedido <strong className="text-ink">{orderNumber}</strong>. Enviamos os
             detalhes para <strong className="text-ink">{ident.email || "seu e-mail"}</strong>.
           </p>
-          {payment === "pix" && (
-            <div className="mt-5 rounded-lg bg-neutral-50 p-4 text-sm text-neutral-600">
-              <p className="flex items-center justify-center gap-2 font-semibold text-success">
-                <PixIcon className="size-4" /> Pague {formatBRL(pixTotal)} via Pix
+          {payment === "pix" && paid && (
+            <div className="mt-5 rounded-lg bg-success-soft p-4 text-sm font-semibold text-success">
+              <p className="flex items-center justify-center gap-2">
+                Pix de {formatBRL(placedOrder?.total ?? pixTotal)} confirmado
               </p>
-              <p className="mt-1 text-xs">O código Pix foi enviado por e-mail. Pague em até 30 min.</p>
+            </div>
+          )}
+          {payment === "boleto" && (
+            <div className="mt-5 rounded-lg bg-neutral-50 p-4 text-xs text-neutral-600">
+              O boleto foi enviado por e-mail. Pague até o vencimento.
             </div>
           )}
           <div className="mt-6 flex flex-col gap-2">
@@ -441,6 +470,21 @@ export default function CheckoutPage() {
                   desc={`${formatBRL(baseTotal)} à vista · vence em 2 dias`}
                 />
               </div>
+              {payment === "pix" && (
+                <div className="mt-4 max-w-xs">
+                  <Input
+                    label="CPF do pagador"
+                    placeholder="000.000.000-00"
+                    inputMode="numeric"
+                    maxLength={14}
+                    value={cpf}
+                    onChange={(e) => setCpf(formatCPF(e.target.value))}
+                  />
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Necessário para gerar a cobrança Pix.
+                  </p>
+                </div>
+              )}
               <StepNav onBack={() => setStep(3)} onNext={() => setStep(5)} />
             </Section>
           )}

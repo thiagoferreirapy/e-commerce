@@ -2,6 +2,7 @@
 
 import { useWishlistStore } from "@/store/wishlist";
 import { toast } from "@/store/toast";
+import { useMounted } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 import { HeartIcon } from "@/components/ui/icons";
 
@@ -21,7 +22,10 @@ export function WishlistButton({
 }) {
   const ids = useWishlistStore((s) => s.ids);
   const toggle = useWishlistStore((s) => s.toggle);
-  const active = ids.includes(productId);
+  // Só reflete o estado favoritado APÓS o mount: no servidor (e no 1º render do
+  // cliente) o store de favoritos ainda está vazio — evita erro de hidratação.
+  const mounted = useMounted();
+  const active = mounted && ids.includes(productId);
 
   function onClick(e: React.MouseEvent) {
     e.preventDefault();

@@ -146,7 +146,14 @@ export interface ShippingOption {
   etaDays: number;
 }
 
-export type OrderStatus = "pago" | "enviado" | "entregue" | "cancelado";
+export type OrderStatus = "aguardando_pagamento" | "pago" | "enviado" | "entregue" | "cancelado";
+
+/** Dados do Pix (Asaas) de um pedido. */
+export interface OrderPix {
+  payload: string; // copia-e-cola
+  encodedImage: string; // QR em base64 (PNG, sem prefixo data:)
+  expiresAt: string | null;
+}
 
 export type PaymentMethod = "pix" | "cartao" | "boleto";
 
@@ -190,6 +197,8 @@ export interface Order {
   installments?: number;
   address: Address;
   shippingLabel: string;
+  /** Presente em pedidos Pix (Asaas). */
+  pix?: OrderPix;
 }
 
 export interface User {

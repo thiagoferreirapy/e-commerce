@@ -44,7 +44,7 @@ authRouter.post(
       include: userInclude,
     });
     const token = signToken({ sub: user.id, email: user.email });
-    setAuthCookie(res, token);
+    setAuthCookie(req, res, token);
     res.status(201).json({ user: toUserDTO(user), token });
   }),
 );
@@ -60,15 +60,15 @@ authRouter.post(
     const ok = await bcrypt.compare(req.body.password, user.passwordHash);
     if (!ok) throw Unauthorized("E-mail ou senha incorretos.");
     const token = signToken({ sub: user.id, email: user.email });
-    setAuthCookie(res, token);
+    setAuthCookie(req, res, token);
     res.json({ user: toUserDTO(user), token });
   }),
 );
 
 authRouter.post(
   "/logout",
-  asyncHandler(async (_req, res) => {
-    clearAuthCookie(res);
+  asyncHandler(async (req, res) => {
+    clearAuthCookie(req, res);
     res.json({ ok: true });
   }),
 );

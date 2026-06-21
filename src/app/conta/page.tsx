@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import type { Address, Order, OrderStatus } from "@/types";
+import type { Address, Order } from "@/types";
+import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/orderStatus";
 import { useAuthStore } from "@/store/auth";
 import { useMounted } from "@/lib/hooks";
 import { getMyOrders } from "@/services/orders";
@@ -30,13 +31,6 @@ import { Badge } from "@/components/ui/Badge";
 import { UserIcon, TrashIcon, CheckIcon } from "@/components/ui/icons";
 
 type Tab = "pedidos" | "enderecos" | "dados";
-
-const STATUS_TONE: Record<OrderStatus, "success" | "ink" | "warning" | "danger"> = {
-  entregue: "success",
-  enviado: "ink",
-  pago: "warning",
-  cancelado: "danger",
-};
 
 export default function AccountPage() {
   const mounted = useMounted();
@@ -450,6 +444,8 @@ function Orders({
       <h2 className="text-lg font-bold text-ink">Meus pedidos</h2>
       {orders.map((o) => {
         const expanded = open === o.id;
+        // "Comprar novamente": leva ao primeiro produto do pedido que ainda existe.
+        const reorderSlug = o.items.find((i) => i.slug)?.slug;
         return (
           <div key={o.id} className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
             <button
@@ -463,7 +459,7 @@ function Orders({
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <Badge tone={STATUS_TONE[o.status]}>{o.status}</Badge>
+                <Badge tone={ORDER_STATUS_TONE[o.status]}>{ORDER_STATUS_LABEL[o.status]}</Badge>
                 <span className="font-bold text-ink">{formatBRL(o.total)}</span>
               </div>
             </button>
@@ -521,7 +517,7 @@ function Orders({
                   <Button variant="outline" size="sm">
                     Rastrear pedido
                   </Button>
-                  <Link href="/">
+                  <Link href={reorderSlug ? `/produto/${reorderSlug}` : "/"}>
                     <Button variant="ghost" size="sm">
                       Comprar novamente
                     </Button>

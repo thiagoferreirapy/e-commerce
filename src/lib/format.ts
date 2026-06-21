@@ -105,6 +105,28 @@ export function isValidCEP(raw: string): boolean {
   return raw.replace(/\D/g, "").length === 8;
 }
 
+/** Máscara de CPF: 12345678900 -> 123.456.789-00 */
+export function formatCPF(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 11);
+  return d
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+/** Valida CPF pelo dígito verificador (rejeita sequências e checksum inválido). */
+export function isValidCPF(raw: string): boolean {
+  const cpf = raw.replace(/\D/g, "");
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  const digit = (slice: number) => {
+    let sum = 0;
+    for (let i = 0; i < slice; i++) sum += Number(cpf[i]) * (slice + 1 - i);
+    const r = 11 - (sum % 11);
+    return r >= 10 ? 0 : r;
+  };
+  return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
+}
+
 /** Arredonda para 2 casas evitando erros de ponto flutuante. */
 export function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;

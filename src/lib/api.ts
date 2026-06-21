@@ -28,7 +28,11 @@ interface ApiOptions {
 
 export async function apiFetch<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const { method = "GET", body, cache = "no-store" } = options;
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {
+    // Evita a página de aviso do ngrok-free (que quebraria o parse do JSON).
+    // Inofensivo quando a API não está atrás do ngrok.
+    "ngrok-skip-browser-warning": "true",
+  };
   if (body !== undefined) headers["Content-Type"] = "application/json";
 
   const token = getToken();

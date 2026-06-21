@@ -28,4 +28,6 @@ export const createOrderSchema = z.object({
   installments: z.coerce.number().int().min(1).max(12).optional().default(1),
   shippingId: z.string().min(1),
   couponCode: z.string().nullable().optional(),
+  // CPF/CNPJ do pagador — exigido pela Asaas no Pix (validado no service).
+  cpf: z.string().optional(),
 });

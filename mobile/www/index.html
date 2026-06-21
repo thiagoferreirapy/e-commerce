@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#23272F" />
+    <title>TORQUE</title>
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: max(24px, env(safe-area-inset-top)) 24px env(safe-area-inset-bottom);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: #16181d;
+        color: #fff;
+        text-align: center;
+      }
+      .brand { font-weight: 800; letter-spacing: 0.04em; font-size: 28px; }
+      .brand b { color: #ff5a1f; }
+      p { color: #a8a096; max-width: 28ch; line-height: 1.5; }
+      button {
+        margin-top: 8px;
+        border: 0;
+        border-radius: 10px;
+        background: #ff5a1f;
+        color: #fff;
+        font-weight: 700;
+        padding: 12px 20px;
+        font-size: 15px;
+      }
+      .spin { width: 28px; height: 28px; border-radius: 50%; border: 3px solid #333; border-top-color: #ff5a1f; animation: s 0.8s linear infinite; }
+      @keyframes s { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <div style="display: grid; gap: 16px; justify-items: center">
+      <div class="brand">TOR<b>QUE</b></div>
+      <div class="spin" id="spin"></div>
+      <p id="msg">Carregando a loja…</p>
+      <button id="retry" style="display: none" onclick="location.reload()">Tentar novamente</button>
+    </div>
+    <script>
+      // Esta tela só aparece quando o app não está apontando para um servidor
+      // (server.url) acessível. Mostra um aviso após alguns segundos.
+      setTimeout(function () {
+        document.getElementById("spin").style.display = "none";
+        document.getElementById("msg").textContent =
+          "Não foi possível conectar à loja. Verifique sua conexão e o servidor configurado.";
+        document.getElementById("retry").style.display = "inline-block";
+      }, 6000);
+    </script>
+  </body>
+</html>
