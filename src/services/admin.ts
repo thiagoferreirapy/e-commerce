@@ -24,20 +24,45 @@ export async function uploadProductImage(file: File): Promise<{ url: string }> {
 
 /* ----------------------------- Dashboard ------------------------------- */
 export interface AdminStats {
+  periodDays: number;
+  // KPIs
   revenue: number;
   orderCount: number;
   avgTicket: number;
+  itemsSold: number;
+  productCount: number;
+  outOfStock: number;
+  userCount: number;
+  newCustomers: number;
+  couponCount: number;
+  reviewCount: number;
+  avgRating: number;
+  newsletterCount: number;
+  stockUnits: number;
+  stockValue: number;
+  totalDiscount: number;
+  totalShipping: number;
+  // Séries / distribuições
+  revenueByDay: { date: string; revenue: number; orders: number }[];
+  newUsersByDay: { date: string; count: number }[];
   statusCounts: { status: string; count: number }[];
-  recentOrders: { id: string; number: string; total: number; status: string; createdAt: string }[];
+  paymentBreakdown: { payment: string; count: number; revenue: number }[];
+  shippingUsage: { label: string; count: number }[];
+  ordersByState: { uf: string; count: number }[];
+  revenueByCategory: { slug: string; name: string; revenue: number }[];
+  revenueByBrand: { name: string; revenue: number }[];
+  ratingDistribution: { rating: number; count: number }[];
+  topCoupons: { code: string; usedCount: number }[];
+  topWishlisted: { id: string; name: string; count: number }[];
+  topCustomers: { name: string; revenue: number; orders: number }[];
+  // Listas
   topProducts: { id: string; name: string; slug: string; soldCount: number; price: number }[];
   lowStock: { id: string; name: string; slug: string; totalStock: number }[];
-  productCount: number;
-  userCount: number;
-  couponCount: number;
+  recentOrders: { id: string; number: string; total: number; status: string; createdAt: string }[];
 }
 
-export function getStats(): Promise<AdminStats> {
-  return apiFetch<AdminStats>("/admin/stats");
+export function getStats(days?: number): Promise<AdminStats> {
+  return apiFetch<AdminStats>(`/admin/stats${days ? `?days=${days}` : ""}`);
 }
 
 /* ----------------------------- Produtos -------------------------------- */
@@ -235,4 +260,38 @@ export function updateCategory(id: string, input: CategoryInput): Promise<AdminC
 }
 export function deleteCategory(id: string): Promise<void> {
   return apiFetch<void>(`/admin/categories/${id}`, { method: "DELETE" });
+}
+
+/* ---- Métodos de entrega ---- */
+export interface ShippingMethodRow {
+  id: string;
+  name: string;
+  price: number;
+  etaDays: number;
+  freeAbove: number | null;
+  active: boolean;
+  position: number;
+}
+export interface ShippingMethodInput {
+  name: string;
+  price: number;
+  etaDays: number;
+  freeAbove?: number | null;
+  active: boolean;
+  position: number;
+}
+export function listShippingMethods(): Promise<ShippingMethodRow[]> {
+  return apiFetch<ShippingMethodRow[]>("/admin/shipping");
+}
+export function createShippingMethod(input: ShippingMethodInput): Promise<ShippingMethodRow> {
+  return apiFetch<ShippingMethodRow>("/admin/shipping", { method: "POST", body: input });
+}
+export function updateShippingMethod(
+  id: string,
+  input: ShippingMethodInput,
+): Promise<ShippingMethodRow> {
+  return apiFetch<ShippingMethodRow>(`/admin/shipping/${id}`, { method: "PUT", body: input });
+}
+export function deleteShippingMethod(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/shipping/${id}`, { method: "DELETE" });
 }

@@ -109,7 +109,19 @@ export function ProductDetail({ product }: { product: Product }) {
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-          <Rating value={product.rating} count={product.reviewCount} size="md" />
+          <button
+            type="button"
+            onClick={() =>
+              document
+                .getElementById("avaliacoes")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
+            className="inline-flex items-center rounded transition-opacity hover:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-flame/40"
+            title="Ver avaliações"
+            aria-label="Ir para as avaliações"
+          >
+            <Rating value={product.rating} count={product.reviewCount} size="md" />
+          </button>
           <span className="text-neutral-400">|</span>
           <span className="text-neutral-500">
             REF: <span className="font-mono text-ink">{product.ref}</span>
@@ -242,7 +254,10 @@ export function ProductDetail({ product }: { product: Product }) {
 
         {/* Frete */}
         <div className="mt-5 border-t border-neutral-200 pt-5">
-          <ShippingCalculator subtotal={product.price * qty} />
+          <ShippingCalculator
+            subtotal={product.price * qty}
+            items={[{ productId: product.id, variantId: variant?.id ?? null, quantity: qty }]}
+          />
           {product.freeShipping && (
             <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-success">
               <TruckIcon className="size-4" /> Este produto tem frete grátis no SEDEX

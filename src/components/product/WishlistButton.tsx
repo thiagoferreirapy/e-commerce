@@ -10,11 +10,14 @@ export function WishlistButton({
   productName,
   className,
   size = "md",
+  highlightBorder = true,
 }: {
   productId: string;
   productName?: string;
   className?: string;
   size?: "sm" | "md";
+  /** Quando favoritado, deixa a borda laranja também. False = só o ícone. */
+  highlightBorder?: boolean;
 }) {
   const ids = useWishlistStore((s) => s.ids);
   const toggle = useWishlistStore((s) => s.toggle);
@@ -40,7 +43,9 @@ export function WishlistButton({
       aria-label={active ? "Remover dos favoritos" : "Adicionar aos favoritos"}
       className={cn(
         "grid shrink-0 aspect-square place-items-center rounded-full border bg-white/90 backdrop-blur transition-colors",
-        active ? "border-flame text-flame" : "border-neutral-200 text-neutral-500 hover:text-flame",
+        active
+          ? cn("text-flame", highlightBorder ? "border-flame" : "border-neutral-200")
+          : "border-neutral-200 text-neutral-500 hover:text-flame",
         dim,
         className,
       )}

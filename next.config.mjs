@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  // Desativado: o StrictMode (dev) monta/desmonta os componentes duas vezes, o que
+  // dispara um erro interno do react-apexcharts (runMaskReveal lendo nó nulo) durante
+  // a animação. É comportamento só de desenvolvimento (no build não há impacto).
+  reactStrictMode: false,
   images: {
     // Placeholders de produto vêm de um serviço externo; libere o host aqui.
     remotePatterns: [

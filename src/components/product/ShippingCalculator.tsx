@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { CartItem } from "@/types";
 import { calculateShipping, type ShippingQuote } from "@/services/shipping";
 import { formatBRL, formatCEP } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
@@ -8,9 +9,11 @@ import { TruckIcon } from "@/components/ui/icons";
 
 export function ShippingCalculator({
   subtotal,
+  items,
   compact,
 }: {
   subtotal: number;
+  items?: CartItem[];
   compact?: boolean;
 }) {
   const [cep, setCep] = useState("");
@@ -24,7 +27,7 @@ export function ShippingCalculator({
     setError("");
     setQuote(null);
     try {
-      const result = await calculateShipping(cep, subtotal);
+      const result = await calculateShipping(cep, subtotal, items);
       setQuote(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao calcular o frete.");
@@ -72,7 +75,7 @@ export function ShippingCalculator({
               <div>
                 <span className="font-semibold text-ink">{o.label}</span>
                 <span className="ml-2 text-xs text-neutral-500">
-                  até {o.etaDays} dias úteis · {quote.regionLabel}
+                  até {o.etaDays} dias úteis
                 </span>
               </div>
               <span className={o.price === 0 ? "font-bold text-success" : "font-semibold text-ink"}>

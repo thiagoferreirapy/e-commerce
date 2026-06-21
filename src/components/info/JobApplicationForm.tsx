@@ -7,11 +7,29 @@ import { Button } from "@/components/ui/Button";
 import { CheckIcon } from "@/components/ui/icons";
 
 const AREAS = ["Atendimento", "Vendas / Loja", "Logística", "Marketing", "Tecnologia", "Outra"];
+const MAX_CV_MB = 5;
 
 export function JobApplicationForm() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", area: AREAS[0], message: "" });
+  const [cv, setCv] = useState<File | null>(null);
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  function pickCv(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // permite reanexar o mesmo arquivo
+    if (!file) return;
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      toast.error("Envie o currículo em PDF.");
+      return;
+    }
+    if (file.size > MAX_CV_MB * 1024 * 1024) {
+      toast.error(`O arquivo deve ter até ${MAX_CV_MB} MB.`);
+      return;
+    }
+    setCv(file);
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -72,6 +90,28 @@ export function JobApplicationForm() {
           placeholder="Experiência, disponibilidade, link do LinkedIn…"
         />
       </div>
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-ink-700">Currículo (PDF)</label>
+        {cv ? (
+          <div className="flex items-center justify-between rounded-md border border-neutral-300 bg-neutral-50 px-3 py-2.5 text-sm">
+            <span className="truncate font-medium text-ink">{cv.name}</span>
+            <button
+              type="button"
+              onClick={() => setCv(null)}
+              className="ml-3 shrink-0 text-xs font-semibold text-neutral-500 hover:text-danger"
+            >
+              Remover
+            </button>
+          </div>
+        ) : (
+          <label className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-md border border-neutral-300 px-4 text-sm font-medium text-ink transition-colors hover:bg-neutral-50">
+            Anexar currículo (.pdf)
+            <input type="file" accept="application/pdf,.pdf" onChange={pickCv} className="hidden" />
+          </label>
+        )}
+        <p className="mt-1 text-xs text-neutral-500">Somente PDF, até {MAX_CV_MB} MB.</p>
+      </div>
+
       <Button type="submit" size="lg" loading={loading}>
         Enviar candidatura
       </Button>
