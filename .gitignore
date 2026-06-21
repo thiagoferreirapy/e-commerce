@@ -1,5 +1,5 @@
-# dependencies
-/node_modules
+# dependencies (em qualquer nível: raiz, backend/, mobile/)
+node_modules/
 /.pnp
 .pnp.js
 
@@ -26,3 +26,26 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# Capacitor (mobile) — artefatos de build/instalação (não versionar)
+# Android
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/captures/
+mobile/android/.idea/
+mobile/android/local.properties
+mobile/android/capacitor-cordova-android-plugins/
+# Assets sincronizados pelo `cap sync` (regenerados automaticamente)
+mobile/android/app/src/main/assets/public/
+mobile/android/app/src/main/assets/capacitor.config.json
+mobile/android/app/src/main/assets/capacitor.plugins.json
+# iOS (quando gerado no Mac)
+mobile/ios/App/Pods/
+mobile/ios/App/build/
+mobile/ios/App/Podfile.lock
+mobile/ios/App/App/public/
+mobile/ios/App/App/capacitor.config.json
+mobile/ios/App/App/capacitor.plugins.json
+# DerivedData/Xcode
+mobile/ios/DerivedData/

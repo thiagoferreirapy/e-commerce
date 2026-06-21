@@ -59,7 +59,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
   const overflowCategories = categories.slice(MAX_VISIBLE_CATEGORIES);
 
   return (
-    <header className="sticky top-0 z-50 bg-white">
+    <header className="sticky top-0 z-50 bg-white pt-[env(safe-area-inset-top)]">
       {/* Faixa de benefícios */}
       <div className="hidden bg-ink text-white lg:block">
         <div className="container-page flex h-9 items-center justify-center gap-8">

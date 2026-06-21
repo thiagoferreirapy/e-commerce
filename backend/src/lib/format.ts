@@ -24,3 +24,16 @@ export function installments(
   while (count > 1 && price / count < minInstallment) count--;
   return { count, value: round2(price / count) };
 }
+
+/** Valida CPF pelo dígito verificador (rejeita sequências e checksum inválido). */
+export function isValidCPF(raw: string): boolean {
+  const cpf = raw.replace(/\D/g, "");
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  const digit = (slice: number) => {
+    let sum = 0;
+    for (let i = 0; i < slice; i++) sum += Number(cpf[i]) * (slice + 1 - i);
+    const r = 11 - (sum % 11);
+    return r >= 10 ? 0 : r;
+  };
+  return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
+}

@@ -6,10 +6,13 @@ import { validate, getQuery } from "../../middleware/validate";
 
 export const adminOrdersRouter = Router();
 
+// Status que o admin pode definir manualmente (fulfillment).
 const STATUSES = ["pago", "enviado", "entregue", "cancelado"] as const;
+// Status filtráveis (inclui o de pagamento pendente, definido pelo fluxo Pix).
+const FILTER_STATUSES = ["aguardando_pagamento", ...STATUSES] as const;
 
 const listQuery = z.object({
-  status: z.enum(STATUSES).optional(),
+  status: z.enum(FILTER_STATUSES).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });

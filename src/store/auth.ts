@@ -48,9 +48,10 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "torque-auth",
-      // O token NÃO é persistido no localStorage (mitiga XSS) — a sessão vive
-      // num cookie httpOnly. Persistimos apenas o usuário para UI imediata.
-      partialize: (s) => ({ user: s.user }),
+      // Persistimos token (Bearer) além do usuário. O Bearer é necessário quando
+      // front e API ficam em domínios diferentes (ex.: ngrok/produção cross-domain),
+      // onde o cookie httpOnly de sessão pode ser bloqueado como cookie de terceiros.
+      partialize: (s) => ({ user: s.user, token: s.token }),
       onRehydrateStorage: () => (state) => {
         if (state) state.hydrated = true;
       },

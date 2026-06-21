@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Montserrat, JetBrains_Mono } from "next/font/google";
 import { site } from "@/config/site";
 import { Header } from "@/components/layout/Header";
@@ -25,6 +25,16 @@ const mono = JetBrains_Mono({
   variable: "--font-mono",
   display: "swap",
 });
+
+// Viewport: cobre o notch (viewportFit) e tinge a status bar (themeColor) no app
+// nativo. O zoom é mantido habilitado para preservar a acessibilidade do site web
+// (o mesmo código serve a loja e o app).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#23272F",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -57,8 +67,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     telephone: site.phone,
   };
 
+  // suppressHydrationWarning: a WebView (Capacitor) / extensões injetam atributos
+  // (ex.: --safe-area-inset-*) em <html>/<body> antes da hidratação.
   return (
-    <html lang="pt-BR" className={`${sans.variable} ${mono.variable}`}>
+    <html lang="pt-BR" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="flex min-h-screen flex-col" suppressHydrationWarning>
         <script
           type="application/ld+json"

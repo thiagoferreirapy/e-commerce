@@ -35,7 +35,13 @@ export function Carousel({
           ? children.map((child, i) => (
               <div
                 key={i}
-                className={cn("snap-start shrink-0", itemClassName ?? "w-[15rem]")}
+                // snap-always (mobile): cada arraste para exatamente no próximo item
+                // (sem "pular" vários com a inércia). No desktop (md+) volta ao normal,
+                // deixando as setas avançarem em grupo.
+                className={cn(
+                  "snap-start snap-always shrink-0 md:snap-normal",
+                  itemClassName ?? "w-[15rem]",
+                )}
               >
                 {child}
               </div>

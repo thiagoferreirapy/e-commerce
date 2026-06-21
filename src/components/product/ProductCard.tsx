@@ -36,17 +36,19 @@ export function ProductCard({ product }: { product: Product }) {
     product.tags.find((t) => t === "oferta-do-dia") ??
     product.tags.find((t) => t === "mais-vendido" || t === "novidade" || t === "destaque");
 
+  // Produtos com variantes vão para a PDP (escolher cor/tamanho) — via <Link>,
+  // para acionar o mesmo loading de navegação dos cards.
   function quickAdd(e: React.MouseEvent) {
     e.preventDefault();
     if (soldOut) return;
-    if (hasVariants) {
-      // Variantes exigem escolha (tamanho/cor) — leva à PDP.
-      window.location.href = href;
-      return;
-    }
     addItem(product.id, null, 1);
     toast.success("Produto adicionado ao carrinho", { label: "Ver carrinho", href: "/carrinho" });
   }
+
+  const ctaClass = cn(
+    "relative z-20 mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md text-sm font-semibold transition-all active:scale-[0.98]",
+    soldOut ? "cursor-not-allowed bg-neutral-100 text-neutral-400" : "bg-ink text-white hover:bg-flame",
+  );
 
   return (
     <article className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md">
@@ -130,19 +132,23 @@ export function ProductCard({ product }: { product: Product }) {
           )}
         </div>
 
-        <button
-          onClick={quickAdd}
-          disabled={soldOut}
-          className={cn(
-            "relative z-20 mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md text-sm font-semibold transition-all active:scale-[0.98]",
-            soldOut
-              ? "cursor-not-allowed bg-neutral-100 text-neutral-400"
-              : "bg-ink text-white hover:bg-flame",
-          )}
-        >
-          <CartIcon className="size-4" />
-          {soldOut ? "Indisponível" : hasVariants ? "Escolher opções" : "Adicionar"}
-        </button>
+        {soldOut ? (
+          <button disabled className={ctaClass}>
+            <CartIcon className="size-4" />
+            Indisponível
+          </button>
+        ) : hasVariants ? (
+          // <Link> (anchor) dispara o NavigationLoader, igual ao clique no card.
+          <Link href={href} className={ctaClass}>
+            <CartIcon className="size-4" />
+            Escolher opções
+          </Link>
+        ) : (
+          <button onClick={quickAdd} className={ctaClass}>
+            <CartIcon className="size-4" />
+            Adicionar
+          </button>
+        )}
       </div>
     </article>
   );

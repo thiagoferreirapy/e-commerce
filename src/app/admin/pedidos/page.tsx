@@ -7,14 +7,12 @@ import { toast } from "@/store/toast";
 import { formatBRL, formatDateShort } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
+import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/orderStatus";
 
+// Status que o admin pode definir manualmente (fulfillment).
 const STATUSES: OrderStatus[] = ["pago", "enviado", "entregue", "cancelado"];
-const STATUS_TONE: Record<OrderStatus, "success" | "ink" | "warning" | "danger"> = {
-  entregue: "success",
-  enviado: "ink",
-  pago: "warning",
-  cancelado: "danger",
-};
+// Filtros (inclui o pendente do Pix).
+const FILTER_STATUSES: OrderStatus[] = ["aguardando_pagamento", ...STATUSES];
 
 export default function AdminOrdersPage() {
   const [filter, setFilter] = useState<OrderStatus | "todos">("todos");
@@ -48,18 +46,18 @@ export default function AdminOrdersPage() {
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-2">
-        {(["todos", ...STATUSES] as const).map((s) => (
+        {(["todos", ...FILTER_STATUSES] as const).map((s) => (
           <button
             key={s}
             onClick={() => setFilter(s)}
             className={cn(
-              "rounded-full border px-3 py-1 text-sm font-medium capitalize transition-colors",
+              "rounded-full border px-3 py-1 text-sm font-medium transition-colors",
               filter === s
                 ? "border-flame bg-flame-50 text-flame-700"
                 : "border-neutral-300 text-neutral-500 hover:bg-neutral-50",
             )}
           >
-            {s}
+            {s === "todos" ? "Todos" : ORDER_STATUS_LABEL[s]}
           </button>
         ))}
       </div>
@@ -104,17 +102,23 @@ export default function AdminOrdersPage() {
                     <td className="px-4 py-3 text-neutral-600">{formatDateShort(o.createdAt)}</td>
                     <td className="px-4 py-3 text-right font-semibold text-ink">{formatBRL(o.total)}</td>
                     <td className="px-4 py-3">
-                      <select
-                        value={o.status}
-                        onChange={(e) => changeStatus(o.id, e.target.value as OrderStatus)}
-                        className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm capitalize focus:border-flame focus:outline-none focus:ring-2 focus:ring-flame/30"
-                      >
-                        {STATUSES.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
+                      {o.status === "aguardando_pagamento" ? (
+                        <Badge tone={ORDER_STATUS_TONE[o.status]}>
+                          {ORDER_STATUS_LABEL[o.status]}
+                        </Badge>
+                      ) : (
+                        <select
+                          value={o.status}
+                          onChange={(e) => changeStatus(o.id, e.target.value as OrderStatus)}
+                          className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm focus:border-flame focus:outline-none focus:ring-2 focus:ring-flame/30"
+                        >
+                          {STATUSES.map((s) => (
+                            <option key={s} value={s}>
+                              {ORDER_STATUS_LABEL[s]}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </td>
                   </tr>
                   {expanded === o.id && (
@@ -133,7 +137,7 @@ export default function AdminOrdersPage() {
                             ))}
                           </ul>
                           <div className="text-sm text-neutral-600">
-                            <Badge tone={STATUS_TONE[o.status]}>{o.status}</Badge>
+                            <Badge tone={ORDER_STATUS_TONE[o.status]}>{ORDER_STATUS_LABEL[o.status]}</Badge>
                             <p className="mt-2">
                               Entrega: <strong>{o.shippingLabel}</strong>
                               <br />

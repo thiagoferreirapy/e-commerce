@@ -1,4 +1,4 @@
-import type { Order, PaymentMethod } from "@/types";
+import type { Order, OrderPix, OrderStatus, PaymentMethod } from "@/types";
 import { apiFetch } from "@/lib/api";
 
 export interface CreateOrderInput {
@@ -18,6 +18,8 @@ export interface CreateOrderInput {
   installments?: number;
   shippingId: string;
   couponCode?: string | null;
+  /** CPF/CNPJ do pagador — obrigatório no Pix (Asaas). */
+  cpf?: string;
 }
 
 /** Cria o pedido (totais recalculados no servidor). Aceita visitante ou logado. */
@@ -34,4 +36,16 @@ export async function getMyOrders(): Promise<Order[]> {
 
 export async function getOrder(id: string): Promise<Order> {
   return apiFetch<Order>(`/orders/${id}`);
+}
+
+/** Status do pagamento (público pelo id). Reconcilia com a Asaas no servidor. */
+export async function getPaymentStatus(orderId: string): Promise<{ status: OrderStatus }> {
+  return apiFetch<{ status: OrderStatus }>(`/orders/${orderId}/payment-status`);
+}
+
+/** QR/copia-e-cola do Pix de um pedido. */
+export async function getOrderPix(
+  orderId: string,
+): Promise<OrderPix & { status: OrderStatus }> {
+  return apiFetch(`/orders/${orderId}/pix`);
 }
