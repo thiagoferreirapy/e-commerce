@@ -120,3 +120,18 @@
   font-weight: 600;
 }
 
+/* ---------------------------------------------------------------------------
+   Anti-zoom do iOS: o Safari mobile dá zoom automático ao focar um campo com
+   font-size < 16px. Em telas pequenas (< sm = 640px) forçamos 16px em todos os
+   campos de formulário; no desktop as utilidades do Tailwind (text-sm = 14px
+   etc.) seguem valendo. !important porque a especificidade de classe vence o
+   seletor de elemento — necessário para este workaround de plataforma.
+   --------------------------------------------------------------------------- */
+@media (max-width: 639.98px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+

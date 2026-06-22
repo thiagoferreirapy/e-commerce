@@ -508,6 +508,7 @@ function Orders({
                   </p>
                   <p className="text-neutral-500 sm:text-right">
                     Pagamento: <span className="uppercase text-ink">{o.payment}</span>
+                    {o.payment === "cartao" && o.cardLast4 ? ` •••• ${o.cardLast4}` : ""}
                     {o.payment === "cartao" && o.installments && o.installments > 1
                       ? ` · ${o.installments}x`
                       : ""}

@@ -18,8 +18,16 @@ export interface CreateOrderInput {
   installments?: number;
   shippingId: string;
   couponCode?: string | null;
-  /** CPF/CNPJ do pagador — obrigatório no Pix (Asaas). */
+  /** CPF/CNPJ do pagador — obrigatório no Pix e no cartão (Asaas). */
   cpf?: string;
+  /** Dados do cartão — obrigatórios quando payment === "cartao". */
+  card?: {
+    number: string;
+    holderName: string;
+    expiryMonth: string;
+    expiryYear: string;
+    ccv: string;
+  };
 }
 
 /** Cria o pedido (totais recalculados no servidor). Aceita visitante ou logado. */

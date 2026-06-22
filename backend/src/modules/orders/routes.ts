@@ -36,7 +36,11 @@ ordersRouter.post(
   optionalAuth,
   validate({ body: createOrderSchema }),
   asyncHandler(async (req, res) => {
-    const result = await service.createOrder(req.body, req.user?.id);
+    // IP do comprador para a antifraude da Asaas no cartão.
+    const result = await service.createOrder(
+      { ...req.body, remoteIp: req.ip },
+      req.user?.id,
+    );
     res.status(201).json(result);
   }),
 );

@@ -7,13 +7,20 @@ import { applyCoupon } from "../coupons/service";
 import { quoteShipping } from "../shipping/service";
 import { getCartItems, replaceCart, resolveLines, type CartItemInput } from "../cart/service";
 import {
+  createBoletoCharge,
+  createCardCharge,
   createPixCharge,
+  getBoletoIdentificationField,
   getOrCreateCustomer,
   getPayment,
   getPixQrCode,
   isFailedStatus,
   isPaidStatus,
+  type CardInput,
 } from "../payments/asaas";
+
+/** Dias até o vencimento do boleto. */
+const BOLETO_DUE_DAYS = 3;
 
 export interface OrderAddressInput {
   recipient: string;
@@ -35,6 +42,9 @@ export interface CreateOrderInput {
   shippingId: string;
   couponCode?: string | null;
   cpf?: string;
+  card?: CardInput;
+  /** IP do comprador — exigido pela Asaas na cobrança no cartão (antifraude). */
+  remoteIp?: string;
 }
 
 /** Status de pedido aguardando pagamento (Pix antes de confirmar). */
@@ -74,6 +84,15 @@ function mapOrder(order: Awaited<ReturnType<typeof loadOrder>>, enrich?: OrderEn
     payment: order.payment,
     installments: order.installments,
     shippingLabel: order.shippingLabel,
+    cardLast4: order.cardLast4 ?? undefined,
+    cardBrand: order.cardBrand ?? undefined,
+    boleto: order.boletoLine
+      ? {
+          line: order.boletoLine,
+          url: order.boletoUrl ?? "",
+          dueDate: order.boletoDueDate ? order.boletoDueDate.toISOString() : null,
+        }
+      : undefined,
     address: JSON.parse(order.addressSnapshot),
     pix: order.pixPayload
       ? {
@@ -122,6 +141,95 @@ async function createPixForOrder(order: {
   };
 }
 
+/**
+ * Autoriza a cobrança no cartão na Asaas (síncrona) e devolve os dados do pedido.
+ * Chamado ANTES de criar o pedido — se a Asaas recusar, o erro propaga e nenhum
+ * pedido é criado. Aprovação vem como status CONFIRMED/RECEIVED.
+ */
+async function createCardForOrder(order: {
+  id: string;
+  number: string;
+  total: number;
+  installments: number;
+  card: CardInput;
+  remoteIp: string;
+  payer: { name: string; cpf: string; email?: string; phone?: string; cep: string; addressNumber: string };
+}) {
+  const customerId = await getOrCreateCustomer({
+    name: order.payer.name,
+    cpfCnpj: order.payer.cpf,
+    email: order.payer.email,
+    phone: order.payer.phone,
+  });
+  const charge = await createCardCharge({
+    customerId,
+    value: order.total,
+    installmentCount: order.installments,
+    externalReference: order.id,
+    description: `Pedido ${order.number}`,
+    card: order.card,
+    holder: {
+      name: order.payer.name,
+      email: order.payer.email,
+      cpfCnpj: order.payer.cpf,
+      postalCode: order.payer.cep,
+      addressNumber: order.payer.addressNumber,
+      phone: order.payer.phone,
+    },
+    remoteIp: order.remoteIp,
+  });
+  if (!isPaidStatus(charge.status)) {
+    // Não autorizada (ou pendente de análise antifraude) — não cria pedido.
+    throw BadRequest("Pagamento no cartão não autorizado. Verifique os dados ou tente outro cartão.");
+  }
+  return {
+    asaasCustomerId: customerId,
+    asaasPaymentId: charge.id,
+    cardLast4: charge.creditCard?.creditCardNumber ?? order.card.number.replace(/\D/g, "").slice(-4),
+    cardBrand: charge.creditCard?.creditCardBrand ?? null,
+  };
+}
+
+/**
+ * Cria a cobrança via boleto na Asaas (cliente + cobrança + linha digitável) e
+ * devolve os dados a gravar no pedido. Chamado ANTES de criar o pedido — se falhar
+ * (ex.: CPF inválido), o erro propaga e nenhum pedido órfão é criado.
+ */
+async function createBoletoForOrder(order: {
+  id: string;
+  number: string;
+  total: number;
+  payer: { name: string; cpf: string; email?: string; phone?: string };
+}) {
+  const customerId = await getOrCreateCustomer({
+    name: order.payer.name,
+    cpfCnpj: order.payer.cpf,
+    email: order.payer.email,
+    phone: order.payer.phone,
+  });
+  const charge = await createBoletoCharge({
+    customerId,
+    value: order.total,
+    daysToDue: BOLETO_DUE_DAYS,
+    externalReference: order.id,
+    description: `Pedido ${order.number}`,
+  });
+  // Linha digitável é um endpoint à parte; se falhar, segue com o link do boleto.
+  let line = "";
+  try {
+    line = (await getBoletoIdentificationField(charge.id)).identificationField;
+  } catch {
+    /* linha digitável indisponível — usuário usa o link/PDF */
+  }
+  return {
+    asaasCustomerId: customerId,
+    asaasPaymentId: charge.id,
+    boletoUrl: charge.bankSlipUrl ?? charge.invoiceUrl ?? null,
+    boletoLine: line || null,
+    boletoDueDate: charge.dueDate ? new Date(charge.dueDate) : null,
+  };
+}
+
 export async function createOrder(input: CreateOrderInput, userId?: string) {
   // Origem dos itens: corpo (visitante) ou carrinho do servidor (logado).
   const rawItems =
@@ -144,8 +252,10 @@ export async function createOrder(input: CreateOrderInput, userId?: string) {
   }
 
   const isPix = input.payment === "pix";
+  const isCard = input.payment === "cartao";
+  const isBoleto = input.payment === "boleto";
 
-  // Dados do pagador (Pix exige CPF e cliente na Asaas).
+  // Dados do pagador (Pix, cartão e boleto exigem CPF e cliente na Asaas).
   const user = userId
     ? await prisma.user.findUnique({
         where: { id: userId },
@@ -153,11 +263,15 @@ export async function createOrder(input: CreateOrderInput, userId?: string) {
       })
     : null;
   let payerCpf = "";
-  if (isPix) {
+  if (isPix || isCard || isBoleto) {
     payerCpf = (input.cpf || user?.cpf || "").replace(/\D/g, "");
     if (!isValidCPF(payerCpf)) {
-      throw BadRequest("Informe um CPF válido para pagar com Pix.");
+      const label = isPix ? "Pix" : isCard ? "cartão" : "boleto";
+      throw BadRequest(`Informe um CPF válido para pagar com ${label}.`);
     }
+  }
+  if (isCard && !input.card) {
+    throw BadRequest("Informe os dados do cartão.");
   }
 
   const subtotal = round2(lines.reduce((acc, l) => acc + l.lineTotal, 0));
@@ -192,11 +306,48 @@ export async function createOrder(input: CreateOrderInput, userId?: string) {
   const number = orderNumber(count + 1);
   const orderId = randomUUID();
 
-  // Pix: cria a cobrança na Asaas ANTES do pedido. Se falhar (CPF inválido etc.),
-  // o erro propaga e nada é gravado (sem pedido órfão nem estoque reservado).
+  const cardInstallments = isCard ? (input.installments ?? 1) : 1;
+
+  // Pix/cartão: cobra na Asaas ANTES do pedido. Se falhar (CPF inválido, cartão
+  // recusado etc.), o erro propaga e nada é gravado (sem pedido órfão).
   let pixData: Awaited<ReturnType<typeof createPixForOrder>> | null = null;
   if (isPix) {
     pixData = await createPixForOrder({
+      id: orderId,
+      number,
+      total,
+      payer: {
+        name: input.address.recipient,
+        cpf: payerCpf,
+        email: user?.email ?? undefined,
+        phone: user?.phone ?? undefined,
+      },
+    });
+  }
+
+  let cardData: Awaited<ReturnType<typeof createCardForOrder>> | null = null;
+  if (isCard) {
+    cardData = await createCardForOrder({
+      id: orderId,
+      number,
+      total,
+      installments: cardInstallments,
+      card: input.card!,
+      remoteIp: input.remoteIp || "127.0.0.1",
+      payer: {
+        name: input.address.recipient,
+        cpf: payerCpf,
+        email: user?.email ?? undefined,
+        phone: user?.phone ?? undefined,
+        cep: input.address.cep,
+        addressNumber: input.address.number,
+      },
+    });
+  }
+
+  let boletoData: Awaited<ReturnType<typeof createBoletoForOrder>> | null = null;
+  if (isBoleto) {
+    boletoData = await createBoletoForOrder({
       id: orderId,
       number,
       total,
@@ -215,16 +366,19 @@ export async function createOrder(input: CreateOrderInput, userId?: string) {
         id: orderId,
         number,
         userId: userId ?? null,
-        // Pix entra como pendente; cartão/boleto seguem mock (pago direto).
-        status: isPix ? PENDING : "pago",
+        // Pix e boleto entram pendentes (confirmam via webhook/polling);
+        // cartão é aprovado na hora (pago).
+        status: isPix || isBoleto ? PENDING : "pago",
         subtotal,
         discount,
         shipping,
         total,
         payment: input.payment,
-        installments: input.payment === "cartao" ? (input.installments ?? 1) : 1,
+        installments: cardInstallments,
         shippingLabel: option.label,
         ...(pixData ?? {}),
+        ...(cardData ?? {}),
+        ...(boletoData ?? {}),
         addressSnapshot: JSON.stringify({
           id: "order-addr",
           label: input.address.label ?? "Entrega",

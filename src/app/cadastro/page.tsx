@@ -97,6 +97,20 @@ export default function RegisterPage() {
         <Button type="submit" fullWidth size="lg" loading={loading}>
           Criar minha conta
         </Button>
+        <p className="text-center text-xs leading-relaxed text-neutral-500">
+          Ao criar sua conta, você concorda com os{" "}
+          <Link href="/termos-de-uso" className="font-medium text-flame hover:underline">
+            Termos de Uso
+          </Link>{" "}
+          e a{" "}
+          <Link
+            href="/politica-de-privacidade"
+            className="font-medium text-flame hover:underline"
+          >
+            Política de Privacidade
+          </Link>
+          .
+        </p>
       </form>
     </AuthShell>
   );

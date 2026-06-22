@@ -201,12 +201,17 @@ model Order {
   shippingLabel   String
   addressSnapshot String // JSON serializado do endereço de entrega
   createdAt       DateTime    @default(now())
-  // Integração Asaas (Pix). Cartão/boleto seguem sem gateway (mock).
+  // Integração Asaas (Pix e cartão). Boleto segue sem gateway (mock).
   asaasCustomerId String?
   asaasPaymentId  String?
   pixPayload      String? // copia-e-cola
   pixEncodedImage String? // QR em base64
   pixExpiresAt    DateTime?
+  cardLast4       String? // últimos 4 dígitos (exibição)
+  cardBrand       String? // bandeira do cartão (VISA, MASTERCARD…)
+  boletoUrl       String? // página/PDF do boleto
+  boletoLine      String? // linha digitável
+  boletoDueDate   DateTime? // vencimento do boleto
   items           OrderItem[]
   user            User?       @relation(fields: [userId], references: [id])
 

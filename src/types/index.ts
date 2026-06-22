@@ -155,6 +155,13 @@ export interface OrderPix {
   expiresAt: string | null;
 }
 
+/** Dados do boleto (Asaas) de um pedido. */
+export interface OrderBoleto {
+  line: string; // linha digitável
+  url: string; // página/PDF do boleto
+  dueDate: string | null; // vencimento
+}
+
 export type PaymentMethod = "pix" | "cartao" | "boleto";
 
 export interface Address {
@@ -199,6 +206,11 @@ export interface Order {
   shippingLabel: string;
   /** Presente em pedidos Pix (Asaas). */
   pix?: OrderPix;
+  /** Presente em pedidos no cartão (exibição). */
+  cardLast4?: string;
+  cardBrand?: string;
+  /** Presente em pedidos via boleto (Asaas). */
+  boleto?: OrderBoleto;
 }
 
 export interface User {

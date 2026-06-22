@@ -17,10 +17,14 @@ import { lookupCEP } from "@/services/cep";
 import { placeOrder } from "@/services/orders";
 import {
   formatBRL,
+  formatCardExpiry,
+  formatCardNumber,
   formatCEP,
   formatCPF,
   formatInstallments,
   installments,
+  isValidCardExpiry,
+  isValidCardNumber,
   isValidCPF,
   pixPrice,
   round2,
@@ -33,6 +37,7 @@ import { Stepper } from "@/components/checkout/Stepper";
 import { OrderSummary } from "@/components/cart/OrderSummary";
 import { CouponField } from "@/components/cart/CouponField";
 import { PixPayment } from "@/components/checkout/PixPayment";
+import { BoletoPayment } from "@/components/checkout/BoletoPayment";
 import { CartIcon, CheckIcon, PixIcon } from "@/components/ui/icons";
 
 const STEPS = ["Identificação", "Endereço", "Frete", "Pagamento", "Revisão"];
@@ -88,6 +93,7 @@ export default function CheckoutPage() {
   const [payment, setPayment] = useState<PaymentMethod>("pix");
   const [installmentCount, setInstallmentCount] = useState(1);
   const [cpf, setCpf] = useState("");
+  const [card, setCard] = useState({ number: "", holderName: "", expiry: "", ccv: "" });
 
   // Pré-preenche o CPF do usuário logado (se houver).
   useEffect(() => {
@@ -165,13 +171,37 @@ export default function CheckoutPage() {
 
   async function confirm() {
     if (!shipping) return;
-    if (payment === "pix" && !isValidCPF(cpf)) {
-      toast.error("Informe um CPF válido para pagar com Pix.");
+    // Pix, cartão e boleto exigem CPF válido (Asaas).
+    if (!isValidCPF(cpf)) {
+      toast.error("Informe um CPF válido para concluir o pagamento.");
       setStep(4);
       return;
     }
+    if (payment === "cartao") {
+      if (!isValidCardNumber(card.number)) {
+        toast.error("Número do cartão inválido.");
+        setStep(4);
+        return;
+      }
+      if (!card.holderName.trim()) {
+        toast.error("Informe o nome impresso no cartão.");
+        setStep(4);
+        return;
+      }
+      if (!isValidCardExpiry(card.expiry)) {
+        toast.error("Validade do cartão inválida ou vencida.");
+        setStep(4);
+        return;
+      }
+      if (!/^\d{3,4}$/.test(card.ccv)) {
+        toast.error("CVV inválido.");
+        setStep(4);
+        return;
+      }
+    }
     setPlacing(true);
     try {
+      const [expMonth, expYY] = card.expiry.split("/");
       const { order } = await placeOrder({
         items: items.map((i) => ({
           productId: i.productId,
@@ -192,10 +222,22 @@ export default function CheckoutPage() {
         installments: payment === "cartao" ? installmentCount : undefined,
         shippingId: shipping.id,
         couponCode: couponCode ?? undefined,
-        cpf: payment === "pix" ? cpf : undefined,
+        cpf,
+        card:
+          payment === "cartao"
+            ? {
+                number: card.number.replace(/\D/g, ""),
+                holderName: card.holderName.trim(),
+                expiryMonth: expMonth,
+                expiryYear: `20${expYY}`,
+                ccv: card.ccv,
+              }
+            : undefined,
       });
       setPlacedOrder(order);
       setOrderNumber(order.number);
+      // Cartão é aprovado de forma síncrona na criação — já entra como pago.
+      if (payment === "cartao") setPaid(true);
       clear();
       setStep(6);
     } catch (err) {
@@ -212,6 +254,11 @@ export default function CheckoutPage() {
   // Pix: tela de pagamento (QR + copia-e-cola + polling) até confirmar.
   if (step === 6 && placedOrder && placedOrder.payment === "pix" && !paid) {
     return <PixPayment order={placedOrder} onPaid={() => setPaid(true)} />;
+  }
+
+  // Boleto: tela com linha digitável + link, com polling do status até compensar.
+  if (step === 6 && placedOrder && placedOrder.payment === "boleto" && !paid) {
+    return <BoletoPayment order={placedOrder} onPaid={() => setPaid(true)} />;
   }
 
   // Confirmação (cartão/boleto mock, ou Pix já confirmado).
@@ -236,9 +283,20 @@ export default function CheckoutPage() {
               </p>
             </div>
           )}
-          {payment === "boleto" && (
-            <div className="mt-5 rounded-lg bg-neutral-50 p-4 text-xs text-neutral-600">
-              O boleto foi enviado por e-mail. Pague até o vencimento.
+          {payment === "cartao" && (
+            <div className="mt-5 rounded-lg bg-success-soft p-4 text-sm font-semibold text-success">
+              <p className="flex items-center justify-center gap-2">
+                Cartão {placedOrder?.cardBrand ? `${placedOrder.cardBrand} ` : ""}
+                {placedOrder?.cardLast4 ? `•••• ${placedOrder.cardLast4} ` : ""}·{" "}
+                {installmentCount}x de {formatBRL(round2(baseTotal / installmentCount))}
+              </p>
+            </div>
+          )}
+          {payment === "boleto" && paid && (
+            <div className="mt-5 rounded-lg bg-success-soft p-4 text-sm font-semibold text-success">
+              <p className="flex items-center justify-center gap-2">
+                Boleto de {formatBRL(placedOrder?.total ?? baseTotal)} compensado
+              </p>
             </div>
           )}
           <div className="mt-6 flex flex-col gap-2">
@@ -439,10 +497,46 @@ export default function CheckoutPage() {
                   desc={formatInstallments(baseTotal)}
                 >
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <Input label="Número do cartão" placeholder="0000 0000 0000 0000" />
-                    <Input label="Nome no cartão" placeholder="Como impresso" />
-                    <Input label="Validade" placeholder="MM/AA" />
-                    <Input label="CVV" placeholder="123" />
+                    <Input
+                      label="Número do cartão"
+                      placeholder="0000 0000 0000 0000"
+                      inputMode="numeric"
+                      autoComplete="cc-number"
+                      maxLength={19}
+                      value={card.number}
+                      onChange={(e) =>
+                        setCard({ ...card, number: formatCardNumber(e.target.value) })
+                      }
+                    />
+                    <Input
+                      label="Nome no cartão"
+                      placeholder="Como impresso"
+                      autoComplete="cc-name"
+                      value={card.holderName}
+                      onChange={(e) => setCard({ ...card, holderName: e.target.value })}
+                    />
+                    <Input
+                      label="Validade"
+                      placeholder="MM/AA"
+                      inputMode="numeric"
+                      autoComplete="cc-exp"
+                      maxLength={5}
+                      value={card.expiry}
+                      onChange={(e) =>
+                        setCard({ ...card, expiry: formatCardExpiry(e.target.value) })
+                      }
+                    />
+                    <Input
+                      label="CVV"
+                      placeholder="123"
+                      inputMode="numeric"
+                      autoComplete="cc-csc"
+                      maxLength={4}
+                      value={card.ccv}
+                      onChange={(e) =>
+                        setCard({ ...card, ccv: e.target.value.replace(/\D/g, "").slice(0, 4) })
+                      }
+                    />
                     <div className="sm:col-span-2">
                       <label className="mb-1.5 block text-sm font-medium text-ink-700">
                         Parcelas
@@ -467,13 +561,13 @@ export default function CheckoutPage() {
                   active={payment === "boleto"}
                   onClick={() => setPayment("boleto")}
                   title="Boleto bancário"
-                  desc={`${formatBRL(baseTotal)} à vista · vence em 2 dias`}
+                  desc={`${formatBRL(baseTotal)} à vista · vence em 3 dias`}
                 />
               </div>
-              {payment === "pix" && (
+              {(payment === "pix" || payment === "cartao" || payment === "boleto") && (
                 <div className="mt-4 max-w-xs">
                   <Input
-                    label="CPF do pagador"
+                    label={payment === "cartao" ? "CPF do titular" : "CPF do pagador"}
                     placeholder="000.000.000-00"
                     inputMode="numeric"
                     maxLength={14}
@@ -481,7 +575,11 @@ export default function CheckoutPage() {
                     onChange={(e) => setCpf(formatCPF(e.target.value))}
                   />
                   <p className="mt-1 text-xs text-neutral-500">
-                    Necessário para gerar a cobrança Pix.
+                    {payment === "pix"
+                      ? "Necessário para gerar a cobrança Pix."
+                      : payment === "cartao"
+                        ? "Necessário para processar o pagamento no cartão."
+                        : "Necessário para gerar o boleto."}
                   </p>
                 </div>
               )}

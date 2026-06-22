@@ -37,7 +37,7 @@ export default function LoginPage() {
       // Mescla carrinho/favoritos do visitante no servidor (uma única vez).
       await Promise.all([mergeCart(), mergeWish()]);
       toast.success("Bem-vindo de volta!");
-      router.push("/conta");
+      router.push("/");
     } catch (err) {
       setErrors({ password: err instanceof Error ? err.message : "Falha no login." });
     } finally {

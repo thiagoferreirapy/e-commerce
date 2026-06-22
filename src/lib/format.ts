@@ -127,6 +127,52 @@ export function isValidCPF(raw: string): boolean {
   return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
 }
 
+/* ----------------------- Cartão de crédito ----------------------- */
+
+/** Máscara do número do cartão: agrupa em blocos de 4 (até 16 dígitos). */
+export function formatCardNumber(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 16);
+  return digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
+}
+
+/** Máscara de validade: 1226 -> 12/26 */
+export function formatCardExpiry(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 4);
+  if (d.length <= 2) return d;
+  return `${d.slice(0, 2)}/${d.slice(2)}`;
+}
+
+/** Valida o número do cartão pelo algoritmo de Luhn (13–19 dígitos). */
+export function isValidCardNumber(raw: string): boolean {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length < 13 || digits.length > 19) return false;
+  let sum = 0;
+  let even = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let n = Number(digits[i]);
+    if (even) {
+      n *= 2;
+      if (n > 9) n -= 9;
+    }
+    sum += n;
+    even = !even;
+  }
+  return sum % 10 === 0;
+}
+
+/** Valida validade "MM/AA": mês 01–12 e ainda não vencida (compara com o mês atual). */
+export function isValidCardExpiry(mmYY: string): boolean {
+  const m = /^(\d{2})\/(\d{2})$/.exec(mmYY.trim());
+  if (!m) return false;
+  const month = Number(m[1]);
+  const year = 2000 + Number(m[2]);
+  if (month < 1 || month > 12) return false;
+  const now = new Date();
+  // Vence no fim do mês: válido enquanto o mês/ano for >= o atual.
+  const lastDay = new Date(year, month, 0, 23, 59, 59);
+  return lastDay.getTime() >= now.getTime();
+}
+
 /** Arredonda para 2 casas evitando erros de ponto flutuante. */
 export function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;

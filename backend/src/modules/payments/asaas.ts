@@ -46,6 +46,15 @@ interface AsaasListCustomers {
 export interface AsaasPayment {
   id: string;
   status: string; // PENDING | RECEIVED | CONFIRMED | OVERDUE | REFUNDED | ...
+  // Presentes na resposta de cobrança no cartão (número mascarado + bandeira).
+  creditCard?: {
+    creditCardNumber?: string; // últimos 4 dígitos
+    creditCardBrand?: string; // VISA | MASTERCARD | ...
+  };
+  // Presentes na resposta de cobrança via boleto.
+  bankSlipUrl?: string; // página/PDF do boleto
+  invoiceUrl?: string; // fatura
+  dueDate?: string; // vencimento (YYYY-MM-DD)
 }
 export interface AsaasPixQrCode {
   encodedImage: string; // PNG base64 (sem o prefixo data:)
@@ -56,6 +65,13 @@ export interface AsaasPixQrCode {
 /** Data de hoje em YYYY-MM-DD (vencimento da cobrança). */
 function today(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** Data daqui a `days` dias em YYYY-MM-DD (vencimento do boleto). */
+function inDays(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
 }
 
 /** Reaproveita o cliente pelo CPF/CNPJ; cria se não existir. */
@@ -98,6 +114,104 @@ export async function createPixCharge(input: {
 /** QR Code + copia-e-cola de uma cobrança Pix. */
 export function getPixQrCode(paymentId: string): Promise<AsaasPixQrCode> {
   return asaasFetch<AsaasPixQrCode>(`/payments/${paymentId}/pixQrCode`);
+}
+
+export interface AsaasBoletoIdentification {
+  identificationField: string; // linha digitável
+  nossoNumero?: string;
+  barCode?: string;
+}
+
+/** Cria uma cobrança via boleto bancário (assíncrono: confirma quando pago). */
+export function createBoletoCharge(input: {
+  customerId: string;
+  value: number;
+  daysToDue: number;
+  externalReference: string;
+  description: string;
+}): Promise<AsaasPayment> {
+  return asaasFetch<AsaasPayment>("/payments", {
+    method: "POST",
+    body: {
+      customer: input.customerId,
+      billingType: "BOLETO",
+      value: input.value,
+      dueDate: inDays(input.daysToDue),
+      externalReference: input.externalReference,
+      description: input.description,
+    },
+  });
+}
+
+/** Linha digitável + código de barras de um boleto. */
+export function getBoletoIdentificationField(
+  paymentId: string,
+): Promise<AsaasBoletoIdentification> {
+  return asaasFetch<AsaasBoletoIdentification>(`/payments/${paymentId}/identificationField`);
+}
+
+export interface CardInput {
+  holderName: string;
+  number: string;
+  expiryMonth: string;
+  expiryYear: string;
+  ccv: string;
+}
+export interface CardHolderInfo {
+  name: string;
+  email?: string;
+  cpfCnpj: string;
+  postalCode: string;
+  addressNumber: string;
+  phone?: string;
+}
+
+/**
+ * Cria uma cobrança no cartão de crédito (checkout transparente). É síncrona: a
+ * Asaas autoriza na hora e retorna `CONFIRMED` (aprovado) ou lança erro (recusada).
+ * Parcelado usa `installmentCount` + `totalValue` (sem juros para o cliente).
+ */
+export function createCardCharge(input: {
+  customerId: string;
+  value: number;
+  installmentCount: number;
+  externalReference: string;
+  description: string;
+  card: CardInput;
+  holder: CardHolderInfo;
+  remoteIp: string;
+}): Promise<AsaasPayment> {
+  const installments = Math.max(1, input.installmentCount);
+  return asaasFetch<AsaasPayment>("/payments", {
+    method: "POST",
+    body: {
+      customer: input.customerId,
+      billingType: "CREDIT_CARD",
+      dueDate: today(),
+      externalReference: input.externalReference,
+      description: input.description,
+      // Valor único vs. parcelado (a Asaas não aceita `value` junto de `totalValue`).
+      ...(installments > 1
+        ? { installmentCount: installments, totalValue: input.value }
+        : { value: input.value }),
+      creditCard: {
+        holderName: input.card.holderName,
+        number: input.card.number.replace(/\D/g, ""),
+        expiryMonth: input.card.expiryMonth,
+        expiryYear: input.card.expiryYear,
+        ccv: input.card.ccv,
+      },
+      creditCardHolderInfo: {
+        name: input.holder.name,
+        email: input.holder.email,
+        cpfCnpj: input.holder.cpfCnpj.replace(/\D/g, ""),
+        postalCode: input.holder.postalCode.replace(/\D/g, ""),
+        addressNumber: input.holder.addressNumber,
+        phone: input.holder.phone,
+      },
+      remoteIp: input.remoteIp,
+    },
+  });
 }
 
 /** Status atual de uma cobrança (usado no polling/reconciliação). */

@@ -151,3 +151,24 @@ export const PixIcon = (p: IconProps) => (
     <path d="M12 3 21 12l-9 9-9-9z" />
   </Base>
 );
+
+export const BarcodeIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M3 5v14M7 5v14M11 5v14M14 5v14M17 5v14M21 5v14" />
+  </Base>
+);
+
+export const EyeIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M2.5 12S5.5 5.5 12 5.5 21.5 12 21.5 12 18.5 18.5 12 18.5 2.5 12 2.5 12Z" />
+    <circle cx="12" cy="12" r="3" />
+  </Base>
+);
+
+export const EyeOffIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M9.9 5.7A9.5 9.5 0 0 1 12 5.5c6.5 0 9.5 6.5 9.5 6.5a16 16 0 0 1-2.5 3.4M6.3 6.8A16 16 0 0 0 2.5 12S5.5 18.5 12 18.5a9.3 9.3 0 0 0 4-.9" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+    <path d="m3 3 18 18" />
+  </Base>
+);
